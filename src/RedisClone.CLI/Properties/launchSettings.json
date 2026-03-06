@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "RedisClone.CLI": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

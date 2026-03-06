@@ -1,0 +1,8 @@
+services:
+  redisclone.cli:
+    image: ${DOCKER_REGISTRY-}redisclonecli
+    build:
+      context: .
+      dockerfile: src/RedisClone.CLI/Dockerfile
+    ports:
+      - "6379:6379"
