@@ -13,6 +13,7 @@ AppSettings appSettings = settingsProvider.GetSettings();
 var serviceBuilder = new ServiceCollection()
     .AddSingleton(appSettings)
     .AddSingleton<CommandProcessor>()
+    .AddTransient<IWorker, TcpConnectionWorker>()
     .AddSingleton<IServer, Server>();
 
 serviceBuilder
