@@ -1,87 +1,92 @@
-﻿using RedisClone.CLI.Extensions;
+﻿using RedisClone.CLI.Commands;
+using RedisClone.CLI.Logging;
+using RedisClone.CLI.Models;
+using RedisClone.CLI.Options;
+using RedisClone.CLI.Server.Interfaces;
+using RedisClone.CLI.Storage;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 namespace RedisClone.CLI.Server;
 
-internal sealed class Server
+internal sealed class Server(
+    AppSettings appSettings, 
+    CommandProcessor commandProcessor,
+    KvpStorage kvpStorage) : IServer
 {
-    private const int Port = 6379;
     private const int Backlog = 10;
-    private const int BufferSize = 1024;
-    private int _nextId = 0;
+    private const int BufferSize = 4096;
+    private int _connectionIdSeed;
 
-    internal async Task StartAndListenAsync(CancellationToken cancellationToken = default)
+    public async Task StartAndListenAsync(CancellationToken cancellationToken = default)
     {
-        using var server = new TcpListener(IPAddress.Any, Port);
-
+        using var listener = new TcpListener(IPAddress.Any, appSettings.Runtime.Port);
         try
         {
-            server.Start(Backlog);
-            Console.WriteLine($"Server listening on port {Port}");
+            listener.Start(Backlog);
+            Console.WriteLine($"Server listening on port {appSettings.Runtime.Port}");
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                Socket socket = await server.AcceptSocketAsync(cancellationToken);
-                Console.WriteLine("Connected new client!");
-                _ = Task.Run(
-                    () => HandleConnectionAsync(socket, cancellationToken),
-                    cancellationToken
-                ).ContinueWith(t => Console.WriteLine($"Connection task faulted: {t.Exception?.GetBaseException().Message}"),
-                    TaskContinuationOptions.OnlyOnFaulted);
+                Socket socket = await listener.AcceptSocketAsync(cancellationToken);
+                int connectionId = Interlocked.Increment(ref _connectionIdSeed);
+                Console.WriteLine($"Connection {connectionId} accepted.");
+                _ = HandleConnectionAsync(socket, connectionId, cancellationToken);
             }
         }
         catch (OperationCanceledException)
         {
-            // Expected on shutdown, not an error
+            // Expected on shutdown
         }
         finally
         {
-            Console.WriteLine("Server shutting down...");
-            server.Stop();
+            listener.Stop();
+            kvpStorage.Dispose();
+            Console.WriteLine("Server shut down.");
         }
     }
 
-    private async Task HandleConnectionAsync(Socket socket, CancellationToken cancellationToken)
+    private async Task HandleConnectionAsync(Socket socket, int connectionId, CancellationToken cancellationToken)
     {
-        int connectionId = Interlocked.Increment(ref _nextId);
         using (socket)
         {
+            var buffer = new byte[BufferSize];
+
             try
             {
-                var buffer = new byte[BufferSize];
-
-                while (socket.Connected && !cancellationToken.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    $"Connection Id {connectionId}. Waiting for request...".WriteLineEncoded();
+                    RespLogger.Waiting(connectionId);
 
                     int received = await socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
                     if (received == 0)
                     {
-                        $"Connection Id {connectionId}. Client disconnected gracefully.".WriteLineEncoded();
+                        RespLogger.Disconnected(connectionId);
                         break;
                     }
 
-                    var requestPayload = Encoding.UTF8.GetString(buffer, 0, received);
-                    $"Connection Id {connectionId}. Received: {requestPayload}".WriteLineEncoded();
+                    string rawRequest = Encoding.UTF8.GetString(buffer, 0, received);
+                    RespLogger.Received(connectionId, rawRequest);
 
-                    byte[] response = Encoding.UTF8.GetBytes("+OK\r\n");
-                    $"Connection Id {connectionId}. Sending: {Encoding.UTF8.GetString(response)}".WriteLineEncoded();
+                    RedisValue response = commandProcessor.Process(rawRequest, socket);
+                    RespLogger.Sending(connectionId, response.Value);
 
-                    await socket.SendAsync(response, SocketFlags.None, cancellationToken);
+                    await socket.SendAsync(response.Value, SocketFlags.None, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"Connection Id {connectionId}. Cancelled.");
+                Console.WriteLine($"Connection {connectionId} cancelled.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Connection Id {connectionId}. Error: {ex.Message}");
+                Console.WriteLine($"Connection {connectionId} faulted: {ex.Message}");
+            }
+            finally
+            {
+                Console.WriteLine($"Connection {connectionId} closed.");
             }
         }
-
-        Console.WriteLine($"Connection Id {connectionId}. Closed.");
     }
 }
