@@ -24,6 +24,12 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
         return new RedisValue(RedisType.ErrorString, payload);
     }
 
+    public static RedisValue ToSimpleString(string value)
+    {
+        byte[] payload = Encoding.UTF8.GetBytes($"+{value}\r\n");
+        return new RedisValue(RedisType.SimpleString, payload);
+    }
+
     public static RedisValue ToBulkString(string? value)
     {
         if (value is null)

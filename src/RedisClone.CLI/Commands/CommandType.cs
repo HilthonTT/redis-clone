@@ -6,4 +6,7 @@ public enum CommandType
 
     Get,
     Set,
+
+    Ping,
+    Echo,
 }
