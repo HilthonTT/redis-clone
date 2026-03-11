@@ -9,4 +9,14 @@ public enum CommandType
 
     Ping,
     Echo,
+
+    Config,
+    Info,
+
+    LLen,
+    LPush,
+    RPush,
+    LRange,
+    LPop,
+    BLPop,
 }

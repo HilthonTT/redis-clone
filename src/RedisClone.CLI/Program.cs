@@ -29,7 +29,11 @@ serviceBuilder
     .AddTransient<ICommandHandler, Get>()
     .AddTransient<ICommandHandler, Set>()
     .AddTransient<ICommandHandler, Echo>()
-    .AddTransient<ICommandHandler, Ping>();
+    .AddTransient<ICommandHandler, Ping>()
+    .AddTransient<ICommandHandler, LLen>()
+    .AddTransient<ICommandHandler, LLPop>()
+    .AddTransient<ICommandHandler, LPush>()
+    .AddTransient<ICommandHandler, LRange>();
 
 using var serviceProvider = serviceBuilder.BuildServiceProvider();
 

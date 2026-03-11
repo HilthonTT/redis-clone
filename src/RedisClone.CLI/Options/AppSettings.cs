@@ -9,10 +9,17 @@ public sealed class AppSettings
         Runtime = new RuntimeSettings
         {
             Port = 6379,
+        },
+        Persistence = new PersistenceSettings
+        {
+            Directory = GetAppDataDirectory(),
+            DbFileName = "backup.rdb",
         }
     };
 
     public required RuntimeSettings Runtime { get; init; }
+
+    public required PersistenceSettings Persistence { get; init; }
 
     public static string GetAppDataDirectory() =>
         Path.Combine(

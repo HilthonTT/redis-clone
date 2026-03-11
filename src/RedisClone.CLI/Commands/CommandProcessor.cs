@@ -13,7 +13,7 @@ internal sealed class CommandProcessor(IEnumerable<ICommandHandler> handlers)
     {
         Command command = Command.Parse(rawPayload);
 
-        if (!_handlers.TryGetValue(command.Type, out var handler))
+        if (!_handlers.TryGetValue(command.Type, out ICommandHandler? handler))
         {
             Console.WriteLine($"Unknown command: {rawPayload}");
             return RedisValue.ToError("Unknown command");
