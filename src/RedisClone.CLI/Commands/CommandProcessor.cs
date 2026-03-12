@@ -1,6 +1,5 @@
 ﻿using RedisClone.CLI.Models;
 using System.Collections.Frozen;
-using System.Net.Sockets;
 
 namespace RedisClone.CLI.Commands;
 
@@ -9,7 +8,7 @@ internal sealed class CommandProcessor(IEnumerable<ICommandHandler> handlers)
     private readonly FrozenDictionary<CommandType, ICommandHandler> _handlers =
         handlers.ToFrozenDictionary(h => h.CommandType);
 
-    public RedisValue Process(string rawPayload, Socket socket)
+    public async Task<RedisValue> Process(string rawPayload, ClientConnection connection)
     {
         Command command = Command.Parse(rawPayload);
 
@@ -19,7 +18,9 @@ internal sealed class CommandProcessor(IEnumerable<ICommandHandler> handlers)
             return RedisValue.ToError("Unknown command");
         }
 
-        RedisValue response = handler.Handle(command, socket);
+        RedisValue response = handler.LongOperation 
+            ? await handler.HandleAsync(command, connection) 
+            : handler.Handle(command, connection);
 
         return response;
     }

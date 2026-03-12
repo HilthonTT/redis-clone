@@ -2,7 +2,6 @@
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Storage;
-using System.Net.Sockets;
 
 namespace RedisClone.CLI.Commands.Handlers;
 
@@ -13,7 +12,7 @@ internal sealed class Set(KvpStorage kvpStorage, AppSettings settings) : BaseCom
 
     public override CommandType CommandType => CommandType.Set;
 
-    protected override RedisValue HandleSpecific(Command command, Socket socket)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string key = command.Arguments[0];
         string value = command.Arguments[1];

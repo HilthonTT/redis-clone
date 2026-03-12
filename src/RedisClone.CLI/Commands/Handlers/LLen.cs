@@ -2,7 +2,6 @@
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Storage;
-using System.Net.Sockets;
 
 namespace RedisClone.CLI.Commands.Handlers;
 
@@ -11,7 +10,7 @@ internal sealed class LLen(AppSettings settings, ListStorage listStorage) : Base
 {
     public override CommandType CommandType => CommandType.LLen;
 
-    protected override RedisValue HandleSpecific(Command command, Socket socket)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         if (!listStorage.TryGetList(command.Arguments[0], out IReadOnlyCollection<string>? list))
         {

@@ -30,7 +30,7 @@ internal sealed class TcpConnectionWorker(CommandProcessor commandProcessor) : I
                 string rawRequest = Encoding.UTF8.GetString(buffer, 0, received);
                 RespLogger.Received(connection.Id, rawRequest);
 
-                RedisValue response = commandProcessor.Process(rawRequest, connection.Socket);
+                RedisValue response = await commandProcessor.Process(rawRequest, connection);
                 RespLogger.Sending(connection.Id, response.Value);
 
                 await connection.Socket.SendAsync(response.Value, SocketFlags.None, cancellationToken);

@@ -16,6 +16,6 @@ internal static class RespLogger
     public static void Disconnected(int connectionId) =>
         Console.WriteLine($"[{connectionId}] Client disconnected.");
 
-    private static string Escape(string value) =>
+    public static string Escape(string value) =>
         value.Replace("\r\n", "\\r\\n");
 }

@@ -2,16 +2,15 @@
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Storage;
-using System.Net.Sockets;
 
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 1, max: 2)]
-internal sealed class LLPop(AppSettings settings, ListStorage listStorage) : LolPopBase(listStorage, settings)
+internal sealed class LLPop(AppSettings settings, ListStorage listStorage) : LPopBase(listStorage, settings)
 {
     public override CommandType CommandType => CommandType.LPop;
 
-    protected override RedisValue HandleSpecific(Command command, Socket socket)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string key = command.Arguments[0];
         bool hasCountArg = command.Arguments.Length == 2;

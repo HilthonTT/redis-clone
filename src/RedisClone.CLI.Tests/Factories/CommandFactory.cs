@@ -17,5 +17,12 @@ internal static class CommandFactory
         return (client, server);
     }
 
+    public static (ClientConnection connection, Socket client) CreateConnectionPair()
+    {
+        var (client, server) = CreateSocketPair();
+        var connection = new ClientConnection(1, server);
+        return (connection, client);
+    }
+
     internal static Command Create(CommandType type, params string[] args) => new(type, args);
 }

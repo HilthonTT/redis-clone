@@ -64,7 +64,29 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
 
     public static RedisValue ToIntegerValue(int value)
     {
-        return new RedisValue(RedisType.Integer, Encoding.UTF8.GetBytes(ToIntegerString(value));
+        return new RedisValue(RedisType.Integer, Encoding.UTF8.GetBytes(ToIntegerString(value)));
+    }
+
+    public static RedisValue FromArray(IEnumerable<RedisValue> values)
+    {
+        var list = values as IList<RedisValue> ?? values.ToList();
+
+        // Calculate total size upfront to avoid repeated allocations
+        int headerSize = Encoding.UTF8.GetByteCount($"*{list.Count}\r\n");
+        int totalSize = headerSize + list.Sum(v => v.Value.Length);
+
+        var buffer = new byte[totalSize];
+        int offset = 0;
+
+        offset += Encoding.UTF8.GetBytes($"*{list.Count}\r\n", buffer.AsSpan(offset));
+
+        foreach (var value in list)
+        {
+            value.Value.CopyTo(buffer, offset);
+            offset += value.Value.Length;
+        }
+
+        return new RedisValue(RedisType.BulkStringArray, buffer);
     }
 
     public static string ToIntegerString(int value) => $":{value}\r\n";

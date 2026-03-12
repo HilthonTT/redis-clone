@@ -6,6 +6,8 @@ public enum CommandType
 
     Get,
     Set,
+    Keys,
+    Type,
 
     Ping,
     Echo,
@@ -19,4 +21,8 @@ public enum CommandType
     LRange,
     LPop,
     BLPop,
+
+    Subscribe,
+    Publish,
+    Unsubscribe,
 }

@@ -2,7 +2,6 @@
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Storage;
-using System.Net.Sockets;
 
 namespace RedisClone.CLI.Commands.Handlers;
 
@@ -62,7 +61,7 @@ internal sealed class LRange(AppSettings settings, ListStorage listStorage) : Ba
     /// Input:  <c>LRANGE mylist 0 abc</c>
     /// Output: <c>-ERR value is not an integer or out of range</c>
     /// </example>
-    protected override RedisValue HandleSpecific(Command command, Socket socket)
+    protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string key = command.Arguments[0];
 

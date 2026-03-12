@@ -2,7 +2,6 @@
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
 using System.Collections.Concurrent;
-using System.Net.Sockets;
 
 namespace RedisClone.CLI.Commands;
 
@@ -12,9 +11,11 @@ internal abstract class BaseCommandHandler(AppSettings settings) : ICommandHandl
 
     public abstract CommandType CommandType { get; }
 
+    public virtual bool LongOperation => false;
+
     protected AppSettings Settings { get; } = settings;
 
-    public RedisValue Handle(Command command, Socket socket)
+    public RedisValue Handle(Command command, ClientConnection connection)
     {
         RedisValue? validationError = ValidateArguments(command);
         if (validationError is not null)
@@ -22,10 +23,25 @@ internal abstract class BaseCommandHandler(AppSettings settings) : ICommandHandl
             return validationError;
         }
 
-        return HandleSpecific(command, socket);
+        return HandleSpecific(command, connection);
     }
 
-    protected abstract RedisValue HandleSpecific(Command command, Socket socket);
+    public async Task<RedisValue> HandleAsync(Command command, ClientConnection connection)
+    {
+        RedisValue? validationError = ValidateArguments(command);
+        if (validationError is not null)
+        {
+            return validationError;
+        }
+
+        return await HandleSpecificAsync(command, connection);
+    }
+
+    protected virtual RedisValue HandleSpecific(Command command, ClientConnection connection) => 
+        throw new NotImplementedException();
+
+    protected virtual Task<RedisValue> HandleSpecificAsync(Command command, ClientConnection connection) => 
+        throw new NotImplementedException();
 
     private RedisValue? ValidateArguments(Command command)
     {

@@ -8,31 +8,29 @@ using System.Text;
 
 namespace RedisClone.CLI.Tests.Handlers;
 
-public sealed class PingHandlerTests : IDisposable
+public sealed class PingHandlerTests : IAsyncDisposable
 {
     private readonly Ping _handler;
-    private readonly Socket _socket;
+    private readonly ClientConnection _connection;
     private readonly Socket _client;
 
     public PingHandlerTests()
     {
         _handler = new Ping(AppSettings.Default);
-        (_client, _socket) = CommandFactory.CreateSocketPair();
+        (_connection, _client) = CommandFactory.CreateConnectionPair();
     }
 
     [Fact]
     public void Handle_WithNoArguments_ReturnsPong()
     {
         var command = CommandFactory.Create(CommandType.Ping);
-
-        var result = _handler.Handle(command, _socket);
-
+        var result = _handler.Handle(command, _connection);
         result.Value.Should().BeEquivalentTo(Encoding.UTF8.GetBytes("+PONG\r\n"));
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        await _connection.DisposeAsync();
         _client.Dispose();
-        _socket.Dispose();
     }
 }
