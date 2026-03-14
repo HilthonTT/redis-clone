@@ -25,4 +25,8 @@ public enum CommandType
     Subscribe,
     Publish,
     Unsubscribe,
+
+    ReplConf,
+    PSync,
+    Wait,
 }

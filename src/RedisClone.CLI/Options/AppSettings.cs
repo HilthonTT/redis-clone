@@ -14,12 +14,18 @@ public sealed class AppSettings
         {
             Directory = GetAppDataDirectory(),
             DbFileName = "backup.rdb",
-        }
+        },
+        Replication = new ReplicationSettings
+        {
+            Role = ReplicationRole.Master,
+        },
     };
 
     public required RuntimeSettings Runtime { get; init; }
 
     public required PersistenceSettings Persistence { get; init; }
+
+    public required ReplicationSettings Replication { get; init; }
 
     public static string GetAppDataDirectory() =>
         Path.Combine(

@@ -3,6 +3,7 @@ using RedisClone.CLI.Commands;
 using RedisClone.CLI.Commands.Handlers;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Options.Interfaces;
+using RedisClone.CLI.Replication;
 using RedisClone.CLI.Server;
 using RedisClone.CLI.Server.Interfaces;
 using RedisClone.CLI.Storage;
@@ -18,6 +19,8 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<CommandProcessor>()
     .AddSingleton<PubSub>()
     .AddTransient<ServerInitializer>()
+    .AddSingleton<ReplicaManager>()
+    .AddSingleton<MasterManager>()
     .AddTransient<IWorker, TcpConnectionWorker>()
     .AddSingleton<IServer, Server>();
 
@@ -46,6 +49,12 @@ using var serviceProvider = serviceBuilder.BuildServiceProvider();
 
 var initializer = serviceProvider.GetRequiredService<ServerInitializer>();
 await initializer.InitializeAsync(args);
+
+var masterManager = serviceProvider.GetRequiredService<MasterManager>();
+masterManager.StartReplication();
+
+var replicationManager = serviceProvider.GetRequiredService<ReplicaManager>();
+await replicationManager.ConnectToMasterAsync();
 
 var server = serviceProvider.GetRequiredService<IServer>();
 await server.StartAndListenAsync();

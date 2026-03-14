@@ -1,11 +1,14 @@
-﻿using System.Text;
+﻿using RedisClone.CLI.Commands;
+using System.Text;
 
 namespace RedisClone.CLI.Models;
 
 public sealed record RedisValue(RedisType Type, byte[] Value)
 {
+    public const string OkValue = "+OK\r\n";
+
     private static readonly byte[] OkPayload =
-        Encoding.UTF8.GetBytes("+OK\r\n");
+        Encoding.UTF8.GetBytes(OkValue);
 
     private static readonly byte[] NilPayload =
         Encoding.UTF8.GetBytes("$-1\r\n");
@@ -62,6 +65,20 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
         return new RedisValue(RedisType.BulkString, Encoding.UTF8.GetBytes(sb.ToString()));
     }
 
+    public static RedisValue ToBulkStringArray(Command command)
+    {
+        List<string> values = [command.Type.ToString()];
+        var finalValues = values.Concat(command.Arguments);
+
+        return ToBulkStringArray(finalValues);
+    }
+
+    public static RedisValue ToBinaryContent(byte[] bytes)
+    {
+        byte[] prefix = Encoding.UTF8.GetBytes($"${bytes.Length}\r\n");
+        return new RedisValue(RedisType.BinaryContent, prefix.Concat(bytes).ToArray());
+    }
+
     public static RedisValue ToIntegerValue(int value)
     {
         return new RedisValue(RedisType.Integer, Encoding.UTF8.GetBytes(ToIntegerString(value)));
@@ -93,3 +110,4 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
 
     private static string ToBulkStringContent(string str) => $"${str.Length}\r\n{str}\r\n";
 }
+
