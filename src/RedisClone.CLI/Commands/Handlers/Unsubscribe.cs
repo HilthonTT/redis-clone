@@ -6,9 +6,12 @@ using RedisClone.CLI.Subscriptions;
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 1)]
+[SupportedInSubscribedMode(supported: true)]
 internal sealed class Unsubscribe(PubSub pubSub, AppSettings settings) : BaseCommandHandler(settings)
 {
     public override CommandType CommandType => CommandType.Unsubscribe;
+
+    public override bool SupportsReplication => false;
 
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {

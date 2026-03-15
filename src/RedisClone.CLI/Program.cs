@@ -43,7 +43,9 @@ serviceBuilder
     .AddTransient<ICommandHandler, Keys>()
     .AddTransient<ICommandHandler, Subscribe>()
     .AddTransient<ICommandHandler, Unsubscribe>()
-    .AddTransient<ICommandHandler, Publish>();
+    .AddTransient<ICommandHandler, Publish>()
+    .AddTransient<ICommandHandler, Wait>()
+    .AddTransient<ICommandHandler, RPush>();
 
 using var serviceProvider = serviceBuilder.BuildServiceProvider();
 

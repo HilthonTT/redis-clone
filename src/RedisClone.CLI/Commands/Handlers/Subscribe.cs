@@ -6,11 +6,14 @@ using RedisClone.CLI.Subscriptions;
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 1)]
+[SupportedInSubscribedMode(supported: true)]
 internal sealed class Subscribe(AppSettings settings, PubSub pubSub) : BaseCommandHandler(settings)
 {
     public override CommandType CommandType => CommandType.Subscribe;
 
     public override bool LongOperation => true;
+
+    public override bool SupportsReplication => false;
 
     protected override async Task<RedisValue> HandleSpecificAsync(Command command, ClientConnection connection)
     {

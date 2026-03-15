@@ -10,6 +10,8 @@ internal sealed class LLen(AppSettings settings, ListStorage listStorage) : Base
 {
     public override CommandType CommandType => CommandType.LLen;
 
+    public override bool SupportsReplication => false;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         if (!listStorage.TryGetList(command.Arguments[0], out IReadOnlyCollection<string>? list))

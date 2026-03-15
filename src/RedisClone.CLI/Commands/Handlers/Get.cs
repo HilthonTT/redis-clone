@@ -10,6 +10,8 @@ internal sealed class Get(KvpStorage kvpStorage, AppSettings settings) : BaseCom
 {
     public override CommandType CommandType => CommandType.Get;
 
+    public override bool SupportsReplication => false;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string? value = kvpStorage.Get(command.Arguments[0]);

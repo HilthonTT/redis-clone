@@ -9,6 +9,8 @@ internal sealed class Config(AppSettings settings) : BaseCommandHandler(settings
 {
     public override CommandType CommandType => CommandType.Config;
 
+    public override bool SupportsReplication => false;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string subCommand = command.Arguments[0];

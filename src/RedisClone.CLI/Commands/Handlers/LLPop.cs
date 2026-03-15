@@ -10,6 +10,8 @@ internal sealed class LLPop(AppSettings settings, ListStorage listStorage) : LPo
 {
     public override CommandType CommandType => CommandType.LPop;
 
+    public override bool SupportsReplication => false;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string key = command.Arguments[0];

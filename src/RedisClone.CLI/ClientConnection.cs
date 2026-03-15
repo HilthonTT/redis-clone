@@ -27,6 +27,10 @@ internal sealed class ClientConnection(int id, Socket socket) : IAsyncDisposable
     public Socket Socket { get; } = socket;
     public bool InSubscribedMode { get; private set; }
 
+    public long LastCommandOffset { get; set; }
+
+    public bool IsReplicaConnection => Id == -1;
+
     // The writer is exposed so PubSub can enqueue without touching internals.
     public ChannelWriter<PubSubMessage> MessageWriter => _messageChannel.Writer;
 

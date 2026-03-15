@@ -8,6 +8,8 @@ internal sealed class Keys(StorageManager storageManager, AppSettings settings) 
 {
     public override CommandType CommandType => CommandType.Keys;
 
+    public override bool SupportsReplication => false;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string pattern = command.Arguments[0].ToUpperInvariant();

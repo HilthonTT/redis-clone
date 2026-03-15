@@ -12,6 +12,8 @@ internal sealed class Set(KvpStorage kvpStorage, AppSettings settings) : BaseCom
 
     public override CommandType CommandType => CommandType.Set;
 
+    public override bool SupportsReplication => true;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string key = command.Arguments[0];

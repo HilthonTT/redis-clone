@@ -6,15 +6,17 @@ using RedisClone.CLI.Storage;
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 2)]
-internal sealed class LPush(AppSettings settings, ListStorage listStorage) : BaseCommandHandler(settings)
+[ReplicationRole(role: ReplicationRole.Master)]
+internal sealed class RPush(AppSettings settings, ListStorage listStorage) : BaseCommandHandler(settings)
 {
-    public override CommandType CommandType => CommandType.LPush;
-
     public override bool SupportsReplication => true;
+
+    public override CommandType CommandType => CommandType.RPush;
 
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
-        int count = listStorage.AddFirst(command.Arguments[0], command.Arguments.Skip(1));
+        int count = listStorage.AddLast(command.Arguments[0], command.Arguments.Skip(1));
+
         return RedisValue.ToIntegerValue(count);
     }
 }

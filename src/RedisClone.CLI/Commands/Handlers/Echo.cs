@@ -9,6 +9,8 @@ internal sealed class Echo(AppSettings settings) : BaseCommandHandler(settings)
 {
     public override CommandType CommandType => CommandType.Echo;
 
+    public override bool SupportsReplication => false;
+
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
         string value = command.Arguments[0];

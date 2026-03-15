@@ -25,6 +25,8 @@ internal sealed class LRange(AppSettings settings, ListStorage listStorage) : Ba
 {
     public override CommandType CommandType => CommandType.LRange;
 
+    public override bool SupportsReplication => false;
+
     /// <summary>
     /// Executes <c>LRANGE key start end</c>.
     /// </summary>
