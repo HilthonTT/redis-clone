@@ -44,6 +44,14 @@ internal sealed class KvpStorage : IDisposable
         _store[key] = entry;
     }
 
+    public void Initialize(Dictionary<string, StorageEntry> loadedData)
+    {
+        foreach (var entry in loadedData)
+        {
+            _store.TryAdd(entry.Key, entry.Value);
+        }
+    }
+
     public bool Remove(string key) => _store.TryRemove(key, out _);
 
     private void EvictExpiredKeys()

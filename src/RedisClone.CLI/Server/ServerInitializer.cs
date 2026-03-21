@@ -1,44 +1,37 @@
-﻿using RedisClone.CLI.Options;
+﻿using RedisClone.CLI.Helpers;
+using RedisClone.CLI.Options;
 using RedisClone.CLI.Options.Interfaces;
+using RedisClone.CLI.Persistence;
+using RedisClone.CLI.Storage;
 
 namespace RedisClone.CLI.Server;
 
-/// <summary>
-/// Responsible for initializing server configuration before startup,
-/// loading persisted settings and applying any command-line overrides.
-/// </summary>
-internal sealed class ServerInitializer(ISettingsProvider settingsProvider)
+internal sealed class ServerInitializer(
+    ISettingsProvider settingsProvider,
+    KvpStorage kvpStorage,
+    RdbParser rdbParser)
 {
-    /// <summary>
-    /// Loads settings from the settings provider and applies any overrides
-    /// passed in via command-line arguments.
-    /// </summary>
-    /// <param name="args">
-    /// Command-line arguments in flag/value pairs, e.g. <c>--port 6379 --host localhost</c>.
-    /// </param>
     internal async Task InitializeAsync(string[] args)
     {
-        await settingsProvider.LoadSettingsAsync();
         AppSettings settings = settingsProvider.GetSettings();
-        Dictionary<string, string> kvp = ParseArgs(args);
+        var kvp = ParseArgs(args);
+
         ApplyPortOverride(kvp, settings);
+        ApplyReplicaSettings(kvp, settings);
+
+        bool settingsChanged = false;
+        settingsChanged |= ApplyDbFilenameSettings(kvp, settings);
+        settingsChanged |= ApplyDirSettings(kvp, settings);
+
+        if (settingsChanged)
+        {
+            await settingsProvider.SaveSettingsAsync(settings);
+        }
+
+        await LoadFromBackupFileAsync(settings.Persistence.Directory, settings.Persistence.DbFileName);
     }
 
-    /// <summary>
-    /// Overrides the configured port with the value of the <c>--port</c> flag, if present.
-    /// </summary>
-    /// <param name="kvp">Parsed flag/value pairs from the command line.</param>
-    /// <param name="settings">The loaded application settings to mutate.</param>
-    /// <exception cref="ArgumentException">
-    /// Thrown if the provided port is not a valid number or falls outside the range 1–65535.
-    /// </exception>
-    /// <example>
-    /// Input:  kvp=<c>{ "--port": "6379" }</c>
-    /// Effect: settings.Runtime.Port = <c>6379</c>
-    ///
-    /// Input:  kvp=<c>{ "--port": "99999" }</c>
-    /// Throws: <c>ArgumentException</c> — port out of range
-    /// </example>
+
     private static void ApplyPortOverride(Dictionary<string, string> kvp, AppSettings settings)
     {
         if (!kvp.TryGetValue("--port", out string? port))
@@ -46,53 +39,112 @@ internal sealed class ServerInitializer(ISettingsProvider settingsProvider)
             return;
         }
 
-        if (!int.TryParse(port, out int parsedPort) || parsedPort is < 1 or > 65535)
+        if (!int.TryParse(port, out int parsed) || parsed is < 1 or > 65535)
         {
-            throw new ArgumentException($"Invalid port value: '{port}'. Must be a number between 1 and 65535.");
+            throw new ArgumentException(
+               $"Invalid port value: '{port}'. Must be a number between 1 and 65535.");
         }
 
-        settings.Runtime.Port = parsedPort;
+        settings.Runtime.Port = parsed;
     }
 
-    /// <summary>
-    /// Parses a flat array of command-line arguments into a flag/value dictionary.
-    /// Arguments are expected in consecutive pairs: a flag followed by its value.
-    /// Flags must begin with <c>--</c>. If duplicate flags are provided, the first wins.
-    /// </summary>
-    /// <param name="args">The raw command-line arguments to parse.</param>
-    /// <returns>
-    /// A case-insensitive dictionary mapping each flag to its value.
-    /// </returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown if a token in a flag position does not start with <c>--</c>.
-    /// </exception>
-    /// <example>
-    /// Input:  <c>["--port", "6379", "--host", "localhost"]</c>
-    /// Output: <c>{ "--port": "6379", "--host": "localhost" }</c>
-    ///
-    /// Input:  <c>["--port", "6379", "--port", "9999"]</c>
-    /// Output: <c>{ "--port": "6379" }</c> — first value wins
-    ///
-    /// Input:  <c>["--port"]</c>
-    /// Output: <c>{}</c> — orphaned flag with no value is safely ignored
-    /// </example>
-    private static Dictionary<string, string> ParseArgs(string[] args)
+    private static void ApplyReplicaSettings(Dictionary<string, string> kvp, AppSettings settings)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        // Step by 2 to consume each flag/value pair together.
-        // args.Length - 1 ensures we never read past the end when accessing args[i + 1].
-        for (int i = 0; i < args.Length - 1; i += 2)
+        if (kvp.TryGetValue("--replicaof", out string? replicaOf))
         {
-            string key = args[i];
-            string value = args[i + 1];
+            // Accept both "host port" (space-separated) and "host:port" formats.
+            var parts = replicaOf.Contains(' ')
+                ? replicaOf.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)
+                : replicaOf.Split(':', 2);
 
-            if (!key.StartsWith("--"))
+            if (parts.Length != 2 || !int.TryParse(parts[1], out int masterPort))
             {
-                throw new ArgumentException($"Expected a flag starting with '--', got '{key}'.");
+                throw new ArgumentException(
+                   $"Invalid --replicaof value: '{replicaOf}'. Expected format: '<host> <port>' or '<host>:<port>'.");
             }
 
-            map.TryAdd(key, value);
+            settings.Replication.Role = ReplicationRole.Slave;
+            settings.Replication.SlaveReplicaSettings = new SlaveReplicaSettings
+            {
+                MasterHost = parts[0],
+                MasterPort = masterPort,
+            };
+
+            return; // Masters don't get a replica ID.
+        }
+
+        settings.Replication.Role = ReplicationRole.Master;
+        settings.Replication.MasterReplicaSettings = new MasterReplicaSettings
+        {
+            MasterReplicaId = StringHelpers.GenerateRandomString(40),
+            MasterReplicaOffset = 0,
+        };
+    }
+
+    private static bool ApplyDbFilenameSettings(Dictionary<string, string> kvp, AppSettings settings)
+    {
+        if (!kvp.TryGetValue("--dbfilename", out string? dbFileName))
+        {
+            return false;
+        }
+        settings.Persistence.DbFileName = dbFileName;
+        return true;
+    }
+
+    private static bool ApplyDirSettings(Dictionary<string, string> kvp, AppSettings settings)
+    {
+        if (!kvp.TryGetValue("--dir", out string? dir))
+        {
+            return false;
+        }
+        settings.Persistence.Directory = dir;
+        return true;
+    }
+
+    private async Task LoadFromBackupFileAsync(string dir, string dbFileName)
+    {
+        string backupFile = Path.Combine(dir, dbFileName);
+        if (!File.Exists(backupFile))
+        {
+            return;
+        }
+
+        try
+        {
+            var dataModel = await rdbParser.ParseAsync(backupFile);
+
+            // RDB files may not contain database 0 — use TryGetValue.
+            if (!dataModel.Databases.TryGetValue(0, out var loadedData) || loadedData.Count == 0)
+            {
+                Console.WriteLine("Backup file contained no entries for database 0.");
+                return;
+            }
+
+            kvpStorage.Initialize(loadedData);
+            Console.WriteLine($"Loaded {loadedData.Count} records from '{backupFile}'.");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Failed to load backup file '{backupFile}': {e.Message}");
+        }
+    }
+
+    private static Dictionary<string, string> ParseArgs(string[] args)
+    {
+        // Validate all flag positions upfront before applying anything.
+        for (int i = 0; i < args.Length - 1; i += 2)
+        {
+            if (!args[i].StartsWith("--"))
+            {
+                throw new ArgumentException(
+                   $"Expected a flag starting with '--' at position {i}, got '{args[i]}'.");
+            }
+        }
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < args.Length - 1; i += 2)
+        {
+            map.TryAdd(args[i], args[i + 1]);
         }
 
         return map;

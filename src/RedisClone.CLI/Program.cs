@@ -3,6 +3,7 @@ using RedisClone.CLI.Commands;
 using RedisClone.CLI.Commands.Handlers;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Options.Interfaces;
+using RedisClone.CLI.Persistence;
 using RedisClone.CLI.Replication;
 using RedisClone.CLI.Server;
 using RedisClone.CLI.Server.Interfaces;
@@ -18,6 +19,7 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton(appSettings)
     .AddSingleton<CommandProcessor>()
     .AddSingleton<PubSub>()
+    .AddSingleton<RdbParser>()
     .AddTransient<ServerInitializer>()
     .AddSingleton<ReplicaManager>()
     .AddSingleton<MasterManager>()
@@ -45,7 +47,9 @@ serviceBuilder
     .AddTransient<ICommandHandler, Unsubscribe>()
     .AddTransient<ICommandHandler, Publish>()
     .AddTransient<ICommandHandler, Wait>()
-    .AddTransient<ICommandHandler, RPush>();
+    .AddTransient<ICommandHandler, RPush>()
+    .AddTransient<ICommandHandler, BLPop>()
+    .AddTransient<ICommandHandler, XAdd>();
 
 using var serviceProvider = serviceBuilder.BuildServiceProvider();
 

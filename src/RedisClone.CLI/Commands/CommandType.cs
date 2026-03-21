@@ -29,4 +29,6 @@ public enum CommandType
     ReplConf,
     PSync,
     Wait,
+
+    XAdd,
 }
