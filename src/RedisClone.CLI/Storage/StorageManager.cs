@@ -13,7 +13,10 @@ internal sealed class StorageManager(
 
     public IEnumerable<string> GetAllKeys()
     {
-        return KvpStorage.Keys.Union(ListStorage.Keys).Order();
+        return KvpStorage.Keys
+            .Union(ListStorage.Keys)
+            .Union(StreamStorage.Keys)
+            .Order();
     }
 
     public ValueType GetType(string key)

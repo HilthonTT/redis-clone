@@ -13,12 +13,11 @@ internal sealed class ListStorage
         list = null;
         if (_store.TryGetValue(key, out var linkedList))
         {
-            return false;
+            list = linkedList;
+            return true;
         }
 
-        list = linkedList;
-
-        return true;
+        return false;
     }
 
     public int AddFirst(string key, IEnumerable<string> values) =>

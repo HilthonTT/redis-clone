@@ -123,7 +123,9 @@ internal sealed class RdbParser
 
             string key = await ReadStringAsync(stream);
             string value = await ReadStringAsync(stream);
-            kvp[key] = StorageEntry.WithExpiry(value, expiresAt.HasValue ? expiresAt.Value.Millisecond : 0);
+            kvp[key] = expiresAt.HasValue
+                ? StorageEntry.WithExpiry(value, (long)(expiresAt.Value - DateTime.UtcNow).TotalMilliseconds)
+                : StorageEntry.Permanent(value);
         }
 
         return kvp;

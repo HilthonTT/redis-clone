@@ -155,6 +155,7 @@ public sealed class ReplicaClient : IAsyncDisposable
                 {
                     Enqueue(span[start..]);
                 }
+                start = i;
             }
         }
 
