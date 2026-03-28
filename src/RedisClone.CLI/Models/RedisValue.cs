@@ -23,7 +23,7 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
         new(RedisType.BulkString, Encoding.UTF8.GetBytes("$-1\r\n"));
 
     public static readonly RedisValue EmptyBulkStringArray =
-        new(RedisType.BulkString, Encoding.UTF8.GetBytes("$*0\r\n"));
+        new(RedisType.BulkStringArray, Encoding.UTF8.GetBytes("*0\r\n"));
 
     public bool Success => Type != RedisType.ErrorString;
 

@@ -1,4 +1,6 @@
-﻿namespace RedisClone.Client.Protocol;
+﻿using RedisClone.Client.Exceptions;
+
+namespace RedisClone.Client.Protocol;
 
 /// <summary>
 /// Represents a single value in the Redis Serialization Protocol (RESP).
@@ -57,14 +59,14 @@ public sealed class RespValue
     /// </summary>
     public long AsLong() => Type == RespType.Integer
         ? IntegerValue
-        : throw new InvalidOperationException($"Cannot convert {Type} to integer.");
+        : throw new RedisException($"Cannot convert {Type} to integer.");
 
     /// <summary>
     /// Returns the array elements, or throws if this isn't an Array type.
     /// </summary>
     public RespValue[] AsArray() => Type == RespType.Array
         ? Elements ?? []
-        : throw new InvalidOperationException($"Cannot convert {Type} to array.");
+        : throw new RedisException($"Cannot convert {Type} to array.");
 
     /// <summary>
     /// Returns the array elements as a list of strings (common for bulk string arrays).
@@ -89,7 +91,7 @@ public sealed class RespValue
     {
         if (IsError)
         {
-            throw new Exception(Text ?? "Unknown Redis error");
+            throw new RedisException(Text ?? "Unknown Redis error");
         }
         return this;
     }

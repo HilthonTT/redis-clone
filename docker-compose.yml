@@ -6,3 +6,11 @@ services:
       dockerfile: src/RedisClone.CLI/Dockerfile
     ports:
       - "6379:6379"
+  webapp.example:
+    image: ${DOCKER_REGISTRY-}webappexample
+    build:
+      context: .
+      dockerfile: src/WebApp.Example/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"

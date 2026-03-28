@@ -4,7 +4,8 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "redisclone.cli": "StartDebugging"
+        "redisclone.cli": "StartDebugging",
+        "webapp.example": "StartDebugging"
       }
     }
   }
