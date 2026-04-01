@@ -1,6 +1,6 @@
 # 🔴 RedisClone
 
-A Redis server implementation built from scratch in C#/.NET 8 — complete with RESP protocol parsing, key-value storage, lists, streams, pub/sub messaging, master-replica replication, RDB persistence, and a dedicated async client library.
+A Redis server implementation built from scratch in C#/.NET 10 — complete with RESP protocol parsing, key-value storage, lists, streams, pub/sub messaging, master-replica replication, RDB persistence, and a dedicated async client library.
 
 Built as a deep-dive into distributed systems internals: binary protocol parsing, concurrent data structures, replication logs, and connection pooling.
 
@@ -13,39 +13,39 @@ Built as a deep-dive into distributed systems internals: binary protocol parsing
 │                        RedisClone.CLI                            │
 │                         (The Server)                             │
 │                                                                  │
-│  ┌──────────┐  ┌───────────────┐  ┌───────────────────────────┐ │
-│  │ TCP      │  │ RESP Parser   │  │ Command Handlers          │ │
-│  │ Listener │──│ (wire → cmd)  │──│ GET SET LPUSH XADD ...    │ │
-│  └──────────┘  └───────────────┘  └─────────┬─────────────────┘ │
+│  ┌──────────┐  ┌───────────────┐  ┌───────────────────────────┐  │
+│  │ TCP      │  │ RESP Parser   │  │ Command Handlers          │  │
+│  │ Listener │──│ (wire → cmd)  │──│ GET SET LPUSH XADD ...    │  │
+│  └──────────┘  └───────────────┘  └──────────┬────────────────┘  │
 │                                              │                   │
-│  ┌───────────────────────────────────────────┼───────────────┐  │
-│  │                    Storage Layer           │               │  │
-│  │  ┌───────────┐  ┌─────────────┐  ┌────────┴────────────┐ │  │
-│  │  │ KvpStorage│  │ ListStorage │  │  StreamStorage      │ │  │
-│  │  │ (strings) │  │ (lists)     │  │  (append-only log)  │ │  │
-│  │  └───────────┘  └─────────────┘  └─────────────────────┘ │  │
-│  └───────────────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────┼───────────────┐   │
+│  │                    Storage Layer           │              │   │
+│  │  ┌───────────┐  ┌─────────────┐  ┌────────┴────────────┐  │   │
+│  │  │ KvpStorage│  │ ListStorage │  │  StreamStorage      │  │   │
+│  │  │ (strings) │  │ (lists)     │  │  (append-only log)  │  │   │
+│  │  └───────────┘  └─────────────┘  └─────────────────────┘  │   │
+│  └───────────────────────────────────────────────────────────┘   │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │ PubSub       │  │ Replication  │  │ RDB Persistence        │ │
-│  │ (fan-out +   │  │ (master →    │  │ (binary snapshot       │ │
-│  │  work-queue) │  │  replica log)│  │  load on startup)      │ │
-│  └──────────────┘  └──────────────┘  └────────────────────────┘ │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │ PubSub       │  │ Replication  │  │ RDB Persistence        │  │
+│  │ (fan-out +   │  │ (master →    │  │ (binary snapshot       │  │
+│  │  work-queue) │  │  replica log)│  │  load on startup)      │  │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────┐
 │                       RedisClone.Client                          │
 │                      (C# Client Library)                         │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │ RedisClient  │  │ Connection   │  │ RESP Reader/Writer     │ │
-│  │ (typed API)  │──│ Pool         │──│ (System.IO.Pipelines)  │ │
-│  └──────────────┘  └──────────────┘  └────────────────────────┘ │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │ RedisClient  │  │ Connection   │  │ RESP Reader/Writer     │  │
+│  │ (typed API)  │──│ Pool         │──│ (System.IO.Pipelines)  │  │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘  │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────────────────────────────────┐ │
-│  │ PubSub       │  │ DI Extensions (Blazor / ASP.NET Core)   │ │
-│  │ Subscriber   │  │ builder.Services.AddRedisClient(...)     │ │
-│  └──────────────┘  └──────────────────────────────────────────┘ │
+│  ┌──────────────┐  ┌──────────────────────────────────────────┐  │
+│  │ PubSub       │  │ DI Extensions (Blazor / ASP.NET Core)    │  │
+│  │ Subscriber   │  │ builder.Services.AddRedisClient(...)     │  │
+│  └──────────────┘  └──────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,7 +94,7 @@ Built as a deep-dive into distributed systems internals: binary protocol parsing
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Docker](https://www.docker.com/) (optional, for containerized deployment)
 
 ### Run the Server
