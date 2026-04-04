@@ -145,18 +145,25 @@ public sealed class ReplicaClient : IAsyncDisposable
     /// </summary>
     private void EnqueueRawCommands(ReadOnlySpan<byte> span)
     {
-        int start = 1;
+        int start = -1;
 
         for (int i = 0; i < span.Length; i++)
         {
             if (span[i] == (byte)'*')
             {
+                // Flush the previous command before starting a new one
                 if (start >= 0)
                 {
-                    Enqueue(span[start..]);
+                    Enqueue(span[start..i]);
                 }
                 start = i;
             }
+        }
+
+        // Flush the last command
+        if (start >= 0)
+        {
+            Enqueue(span[start..]);
         }
 
         void Enqueue(ReadOnlySpan<byte> command)

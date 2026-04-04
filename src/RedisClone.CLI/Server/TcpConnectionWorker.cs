@@ -1,36 +1,39 @@
 ﻿using RedisClone.CLI.Commands;
 using RedisClone.CLI.Logging;
 using RedisClone.CLI.Models;
+using RedisClone.CLI.Protocol;
 using RedisClone.CLI.Server.Interfaces;
+using System.IO.Pipelines;
 using System.Net.Sockets;
-using System.Text;
 
 namespace RedisClone.CLI.Server;
 
 internal sealed class TcpConnectionWorker(CommandProcessor commandProcessor) : IWorker
 {
-    private const int BufferSize = 4096;
-
-    public async Task HandleConnectionAsync(ClientConnection connection, CancellationToken cancellationToken = default)
+    public async Task HandleConnectionAsync(
+        ClientConnection connection, 
+        CancellationToken cancellationToken = default)
     {
-        var buffer = new byte[BufferSize];
+        var stream = new NetworkStream(connection.Socket, ownsSocket: false);
+        var reader = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
+
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 RespLogger.Waiting(connection.Id);
 
-                int received = await connection.Socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
-                if (received == 0)
+                RespResult? parsed = await RespParser.ReadAsync(reader, cancellationToken);
+                if (parsed is null)
                 {
                     RespLogger.Disconnected(connection.Id);
                     break;
                 }
 
-                string rawRequest = Encoding.UTF8.GetString(buffer, 0, received);
-                RespLogger.Received(connection.Id, rawRequest);
+                var command = Command.FromResp(parsed);
+                RespLogger.Received(connection.Id, $"{command.Type} {string.Join(' ', command.Arguments)}");
 
-                RedisValue response = await commandProcessor.Process(rawRequest, connection);
+                RedisValue response = await commandProcessor.ProcessCommand(command, connection);
                 RespLogger.Sending(connection.Id, response.Value);
 
                 await connection.Socket.SendAsync(response.Value, SocketFlags.None, cancellationToken);
@@ -43,6 +46,11 @@ internal sealed class TcpConnectionWorker(CommandProcessor commandProcessor) : I
         catch (Exception ex)
         {
             Console.WriteLine($"Connection {connection.Id} faulted: {ex.Message}");
+        }
+        finally
+        {
+            await reader.CompleteAsync();
+            stream.Dispose();
         }
     }
 }

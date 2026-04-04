@@ -1,4 +1,6 @@
-﻿namespace RedisClone.CLI.Commands;
+﻿using RedisClone.CLI.Protocol;
+
+namespace RedisClone.CLI.Commands;
 
 // Parses the Redis Serialization Protocol (RESP) array format:
 // *<count>\r\n$<len>\r\n<command>\r\n[$<len>\r\n<arg>\r\n...]
@@ -38,5 +40,22 @@ public sealed record Command(CommandType Type, string[] Arguments)
         }
 
         return new Command(commandType, arguments.ToArray());
+    }
+
+    internal static Command FromResp(RespResult result)
+    {
+        if (result.Type != RespResultType.Array || result.Elements is null || result.Elements.Length == 0)
+        {
+            return Unknown;
+        }
+
+        (string? name, string[]? args) = result.ToCommand();
+
+        if (!Enum.TryParse(name, ignoreCase: true, out CommandType commandType))
+        {
+            return Unknown;
+        }
+
+        return new Command(commandType, args);
     }
 }

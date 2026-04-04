@@ -6,15 +6,16 @@ using RedisClone.CLI.Storage;
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 1)]
-internal sealed class Get(KvpStorage kvpStorage, AppSettings settings) : BaseCommandHandler(settings)
+internal sealed class Ttl(KvpStorage kvpStorage, AppSettings settings) : BaseCommandHandler(settings)
 {
-    public override CommandType CommandType => CommandType.Get;
+    public override CommandType CommandType => CommandType.Ttl;
 
     public override bool SupportsReplication => false;
 
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
-        string? value = kvpStorage.Get(command.Arguments[0]);
-        return RedisValue.ToBulkString(value);
+        long ttlMs = kvpStorage.GetTimeToLive(command.Arguments[0]);
+        long ttlSec = ttlMs > 0 ? ttlMs / 1000 : ttlMs;
+        return RedisValue.ToLongValue(ttlSec);
     }
 }

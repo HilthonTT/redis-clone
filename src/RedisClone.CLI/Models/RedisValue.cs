@@ -23,7 +23,16 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
         new(RedisType.BulkString, Encoding.UTF8.GetBytes("$-1\r\n"));
 
     public static readonly RedisValue EmptyBulkStringArray =
-        new(RedisType.BulkStringArray, Encoding.UTF8.GetBytes("*0\r\n"));
+        new(RedisType.BulkStringArray, Encoding.UTF8.GetBytes("$*0\r\n"));
+
+    public static readonly RedisValue QueuedResponse =
+        new(RedisType.SimpleString, Encoding.UTF8.GetBytes("+QUEUED\r\n"));
+
+    public static readonly RedisValue One = 
+        new(RedisType.Integer, Encoding.UTF8.GetBytes(":1\r\n"));
+
+    public static readonly RedisValue Zero = 
+        new(RedisType.Integer, Encoding.UTF8.GetBytes(":0\r\n"));
 
     public bool Success => Type != RedisType.ErrorString;
 
@@ -84,6 +93,11 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
         return new RedisValue(RedisType.Integer, Encoding.UTF8.GetBytes(ToIntegerString(value)));
     }
 
+    public static RedisValue ToLongValue(long value)
+    {
+        return new RedisValue(RedisType.Long, Encoding.UTF8.GetBytes(ToLongString(value)));
+    }
+
     public static RedisValue FromArray(IEnumerable<RedisValue> values)
     {
         var list = values as IList<RedisValue> ?? values.ToList();
@@ -107,6 +121,8 @@ public sealed record RedisValue(RedisType Type, byte[] Value)
     }
 
     public static string ToIntegerString(int value) => $":{value}\r\n";
+
+    public static string ToLongString(long value) => $":{value}\r\n";
 
     private static string ToBulkStringContent(string str) => $"${str.Length}\r\n{str}\r\n";
 }

@@ -1,4 +1,5 @@
-﻿using RedisClone.CLI.Logging;
+﻿using RedisClone.CLI.Commands;
+using RedisClone.CLI.Logging;
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Subscriptions;
 using System.Net.Sockets;
@@ -19,6 +20,7 @@ internal sealed class ClientConnection(int id, Socket socket) : IAsyncDisposable
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _modeLock = new(1, 1);
+    private readonly List<Command> _transactionQueue = [];
 
     private Task? _broadcastTask;
     private bool _disposed;
@@ -33,6 +35,30 @@ internal sealed class ClientConnection(int id, Socket socket) : IAsyncDisposable
 
     // The writer is exposed so PubSub can enqueue without touching internals.
     public ChannelWriter<PubSubMessage> MessageWriter => _messageChannel.Writer;
+
+    public bool InTransactionMode { get; private set; }
+
+    public void EnterTransactionMode()
+    {
+        InTransactionMode = true;
+        _transactionQueue.Clear();
+    }
+
+    public void QueueCommand(Command command) => _transactionQueue.Add(command);
+
+    public List<Command> FlushTransaction()
+    {
+        var commands = new List<Command>(_transactionQueue);
+        _transactionQueue.Clear();
+        InTransactionMode = false;
+        return commands;
+    }
+
+    public void DiscardTransaction()
+    {
+        _transactionQueue.Clear();
+        InTransactionMode = false;
+    }
 
     public async Task EnterSubscribedModeAsync()
     {

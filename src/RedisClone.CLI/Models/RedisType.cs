@@ -10,5 +10,6 @@ public enum RedisType
     BinaryContent,
     ReplicaConnection,
     Integer,
+    Long,
     Void
 }

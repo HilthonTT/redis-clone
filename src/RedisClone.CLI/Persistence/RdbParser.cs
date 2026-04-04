@@ -28,7 +28,6 @@ internal sealed class RdbParser
 
     private static async Task ParseHeaderAsync(Stream stream, DataModel dataModel)
     {
-        // Each section gets its own stack-allocated or pooled buffer.
         var header = new byte[9];
         await stream.ReadExactlyAsync(header);
 
@@ -67,16 +66,15 @@ internal sealed class RdbParser
         {
             byte next = await PeekByteAsync(stream);
 
-            if (next == 0xFF) // EOF marker
+            if (next == 0xFF)
             {
                 await ConsumePeekedAsync();
-                // Remaining 8 bytes are the CRC64 checksum — skip for now.
                 var crc = new byte[8];
                 await stream.ReadExactlyAsync(crc);
                 return;
             }
 
-            if (next != 0xFE) return; // Unexpected — stop gracefully.
+            if (next != 0xFE) return;
 
             await ConsumePeekedAsync();
             int dbNumber = (int)await ReadLengthAsync(stream);
@@ -95,7 +93,7 @@ internal sealed class RdbParser
         }
 
         int totalKeys = (int)await ReadLengthAsync(stream);
-        int _ = (int)await ReadLengthAsync(stream); // keys-with-expiry count (informational)
+        int _ = (int)await ReadLengthAsync(stream); // keys-with-expiry count
 
         var kvp = new Dictionary<string, StorageEntry>(totalKeys);
 
@@ -123,19 +121,23 @@ internal sealed class RdbParser
 
             string key = await ReadStringAsync(stream);
             string value = await ReadStringAsync(stream);
-            kvp[key] = expiresAt.HasValue
-                ? StorageEntry.WithExpiry(value, (long)(expiresAt.Value - DateTime.UtcNow).TotalMilliseconds)
-                : StorageEntry.Permanent(value);
+
+            if (expiresAt.HasValue)
+            {
+                // Compute remaining TTL as a delta from now.
+                // If already expired, store with 0ms so the eviction timer cleans it up.
+                long remainingMs = (long)(expiresAt.Value.ToUniversalTime() - DateTime.UtcNow).TotalMilliseconds;
+                kvp[key] = StorageEntry.WithExpiry(value, Math.Max(remainingMs, 0));
+            }
+            else
+            {
+                kvp[key] = StorageEntry.Permanent(value);
+            }
         }
 
         return kvp;
     }
 
-
-    /// <summary>
-    /// Reads an RDB length-encoded integer.
-    /// Returns the length for string/array sizing, or the encoded integer value.
-    /// </summary>
     private async Task<(long Value, bool IsLength)> ReadLengthEncodedAsync(Stream stream)
     {
         byte first = await ReadByteAsync(stream);
@@ -144,28 +146,25 @@ internal sealed class RdbParser
         switch (type)
         {
             case 0b00:
-                // 6-bit length
                 return (first & 0b0011_1111, true);
 
             case 0b01:
-                // 14-bit length (big-endian)
                 byte second = await ReadByteAsync(stream);
                 int len14 = ((first & 0b0011_1111) << 8) | second;
                 return (len14, true);
 
             case 0b10:
-                // 32-bit big-endian length
                 var buf32 = new byte[4];
                 await stream.ReadExactlyAsync(buf32);
                 return (BinaryPrimitives.ReadUInt32BigEndian(buf32), true);
 
-            default: // 0b11 — special integer encoding
+            default:
                 int intType = first & 0b0011_1111;
                 int byteCount = intType switch
                 {
-                    0 => 1, // 8-bit int
-                    1 => 2, // 16-bit int
-                    2 => 4, // 32-bit int
+                    0 => 1,
+                    1 => 2,
+                    2 => 4,
                     _ => throw new InvalidDataException(
                         $"Unsupported special encoding: {intType}")
                 };
@@ -184,7 +183,6 @@ internal sealed class RdbParser
         int length = (int)value;
         if (length == 0) return string.Empty;
 
-        // Rent a buffer to avoid per-call allocation for typical string sizes.
         byte[] rented = ArrayPool<byte>.Shared.Rent(length);
         try
         {

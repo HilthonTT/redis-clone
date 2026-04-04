@@ -3,5 +3,7 @@
 public enum EventType
 {
     ListPushed,
-    Subscription
+    Subscription,
+    StreamAdded,
+    StreamAppended,
 }

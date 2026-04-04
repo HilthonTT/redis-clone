@@ -6,15 +6,15 @@ using RedisClone.CLI.Storage;
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 1)]
-internal sealed class Get(KvpStorage kvpStorage, AppSettings settings) : BaseCommandHandler(settings)
+internal sealed class Exists(StorageManager storage, AppSettings settings) : BaseCommandHandler(settings)
 {
-    public override CommandType CommandType => CommandType.Get;
+    public override CommandType CommandType => CommandType.Exists;
 
     public override bool SupportsReplication => false;
 
     protected override RedisValue HandleSpecific(Command command, ClientConnection connection)
     {
-        string? value = kvpStorage.Get(command.Arguments[0]);
-        return RedisValue.ToBulkString(value);
+        bool exists = storage.ContainsKey(command.Arguments[0]);
+        return exists ? RedisValue.One : RedisValue.Zero;
     }
 }

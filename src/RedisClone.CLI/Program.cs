@@ -33,23 +33,54 @@ serviceBuilder
     .AddSingleton<StorageManager>();
 
 serviceBuilder
+    // Strings
     .AddTransient<ICommandHandler, Get>()
     .AddTransient<ICommandHandler, Set>()
+    .AddTransient<ICommandHandler, Incr>()
+    .AddTransient<ICommandHandler, Decr>()
+    .AddTransient<ICommandHandler, IncrBy>()
+    .AddTransient<ICommandHandler, DecrBy>()
+
+    // Server
     .AddTransient<ICommandHandler, Echo>()
     .AddTransient<ICommandHandler, Ping>()
+    .AddTransient<ICommandHandler, Config>()
+
+    // Keys
+    .AddTransient<ICommandHandler, Keys>()
+    .AddTransient<ICommandHandler, RedisClone.CLI.Commands.Handlers.Type>()
+    .AddTransient<ICommandHandler, Delete>()
+    .AddTransient<ICommandHandler, Exists>()
+    .AddTransient<ICommandHandler, Expire>()
+    .AddTransient<ICommandHandler, PExpire>()
+    .AddTransient<ICommandHandler, Ttl>()
+
+    // Lists
     .AddTransient<ICommandHandler, LLen>()
     .AddTransient<ICommandHandler, LLPop>()
     .AddTransient<ICommandHandler, LPush>()
+    .AddTransient<ICommandHandler, RPush>()
+    .AddTransient<ICommandHandler, RPop>()
     .AddTransient<ICommandHandler, LRange>()
-    .AddTransient<ICommandHandler, RedisClone.CLI.Commands.Handlers.Type>()
-    .AddTransient<ICommandHandler, Keys>()
+    .AddTransient<ICommandHandler, BLPop>()
+
+    // Pub/Sub
     .AddTransient<ICommandHandler, Subscribe>()
     .AddTransient<ICommandHandler, Unsubscribe>()
     .AddTransient<ICommandHandler, Publish>()
+
+    // Replication
     .AddTransient<ICommandHandler, Wait>()
-    .AddTransient<ICommandHandler, RPush>()
-    .AddTransient<ICommandHandler, BLPop>()
-    .AddTransient<ICommandHandler, XAdd>();
+
+    // Streams
+    .AddTransient<ICommandHandler, XAdd>()
+    .AddTransient<ICommandHandler, XRange>()
+    .AddTransient<ICommandHandler, XRead>()
+
+    // Transactions
+    .AddTransient<ICommandHandler, Multi>()
+    .AddTransient<ICommandHandler, Exec>()
+    .AddTransient<ICommandHandler, Discard>();
 
 using var serviceProvider = serviceBuilder.BuildServiceProvider();
 

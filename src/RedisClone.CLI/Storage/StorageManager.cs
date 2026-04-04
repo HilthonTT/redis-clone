@@ -19,6 +19,20 @@ internal sealed class StorageManager(
             .Order();
     }
 
+    public bool Delete(string key)
+    {
+        return KvpStorage.Remove(key)
+            || ListStorage.Remove(key)
+            || StreamStorage.Remove(key);
+    }
+
+    public bool ContainsKey(string key)
+    {
+        return KvpStorage.Get(key) is not null
+            || ListStorage.TryGetList(key, out _)
+            || StreamStorage.HasKey(key);
+    }
+
     public ValueType GetType(string key)
     {
         if (KvpStorage.Get(key) is not null)

@@ -3,6 +3,7 @@ using RedisClone.CLI.Commands;
 using RedisClone.CLI.Commands.Handlers;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Storage;
+using RedisClone.CLI.Subscriptions;
 using RedisClone.CLI.Tests.Factories;
 using System.Net.Sockets;
 using System.Text;
@@ -12,6 +13,7 @@ namespace RedisClone.CLI.Tests.Handlers;
 public sealed class ListHandlerTests : IAsyncDisposable
 {
     private readonly ListStorage _listStorage = new();
+    private readonly PubSub _pubSub = new();
     private readonly AppSettings _settings = AppSettings.Default;
     private readonly ClientConnection _connection;
     private readonly Socket _client;
@@ -28,7 +30,7 @@ public sealed class ListHandlerTests : IAsyncDisposable
     [Fact]
     public void LPush_SingleValue_ReturnsCount()
     {
-        var handler = new LPush(_settings, _listStorage);
+        var handler = new LPush(_settings, _listStorage, _pubSub);
         var cmd = CommandFactory.Create(CommandType.LPush, "mylist", "a");
         var result = handler.Handle(cmd, _connection);
 
@@ -38,7 +40,7 @@ public sealed class ListHandlerTests : IAsyncDisposable
     [Fact]
     public void LPush_MultipleValues_ReturnsAccumulatedCount()
     {
-        var handler = new LPush(_settings, _listStorage);
+        var handler = new LPush(_settings, _listStorage, _pubSub);
         var cmd = CommandFactory.Create(CommandType.LPush, "mylist", "a", "b", "c");
         var result = handler.Handle(cmd, _connection);
 
@@ -48,7 +50,7 @@ public sealed class ListHandlerTests : IAsyncDisposable
     [Fact]
     public void LPush_TooFewArgs_ReturnsError()
     {
-        var handler = new LPush(_settings, _listStorage);
+        var handler = new LPush(_settings, _listStorage, _pubSub);
         var cmd = CommandFactory.Create(CommandType.LPush, "mylist");
         var result = handler.Handle(cmd, _connection);
 
@@ -60,7 +62,7 @@ public sealed class ListHandlerTests : IAsyncDisposable
     [Fact]
     public void RPush_SingleValue_ReturnsCount()
     {
-        var handler = new RPush(_settings, _listStorage);
+        var handler = new LPush(_settings, _listStorage, _pubSub);
         var cmd = CommandFactory.Create(CommandType.RPush, "mylist", "a");
         var result = handler.Handle(cmd, _connection);
 
@@ -70,7 +72,7 @@ public sealed class ListHandlerTests : IAsyncDisposable
     [Fact]
     public void RPush_MultipleValues_ReturnsCount()
     {
-        var handler = new RPush(_settings, _listStorage);
+        var handler = new LPush(_settings, _listStorage, _pubSub);
         var cmd = CommandFactory.Create(CommandType.RPush, "mylist", "x", "y");
         var result = handler.Handle(cmd, _connection);
 

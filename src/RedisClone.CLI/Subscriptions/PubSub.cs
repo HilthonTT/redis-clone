@@ -38,7 +38,6 @@ internal sealed class PubSub : IDisposable
                 _subscriptions[topic] = pipes;
             }
 
-            // Idempotent — re-subscribing to the same topic is a no-op
             if (pipes.TryAdd(subscriberId, pipe))
             {
                 subscriber.TopicKeys.Add(topic);
@@ -68,7 +67,6 @@ internal sealed class PubSub : IDisposable
             {
                 subscriber.TopicKeys.Remove(topic);
 
-                // Clean up empty topic entries to avoid memory growth
                 if (pipes.Count == 0)
                 {
                     _subscriptions.Remove(topic);
@@ -76,6 +74,39 @@ internal sealed class PubSub : IDisposable
             }
 
             return subscriber.SubscriptionsCount;
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+    }
+
+    /// <summary>
+    /// Removes all subscriptions for a given subscriber. Call on client disconnect.
+    /// </summary>
+    public void UnsubscribeAll(int subscriberId)
+    {
+        _lock.EnterWriteLock();
+        try
+        {
+            if (!_subscribers.TryGetValue(subscriberId, out var subscriber))
+            {
+                return;
+            }
+
+            foreach (string topic in subscriber.TopicKeys)
+            {
+                if (_subscriptions.TryGetValue(topic, out var pipes))
+                {
+                    pipes.Remove(subscriberId);
+                    if (pipes.Count == 0)
+                    {
+                        _subscriptions.Remove(topic);
+                    }
+                }
+            }
+
+            _subscribers.Remove(subscriberId);
         }
         finally
         {
@@ -99,6 +130,7 @@ internal sealed class PubSub : IDisposable
             {
                 EventType.Subscription => BroadcastToAll(eventType, topicKey, payload, pipes),
                 EventType.ListPushed => DeliverToOne(eventType, topicKey, payload, pipes),
+                EventType.StreamAppended => BroadcastToAll(eventType, topicKey, payload, pipes),
                 _ => throw new ArgumentOutOfRangeException(nameof(eventType), eventType, "Unknown event type")
             };
         }
@@ -108,27 +140,22 @@ internal sealed class PubSub : IDisposable
         }
     }
 
-    // Fan-out: every subscriber gets the message (SUBSCRIBE semantics)
     private static int BroadcastToAll(
-         EventType eventType,
-         string topicKey,
-         string payload,
-         Dictionary<int, ChannelWriter<PubSubMessage>> pipes)
+        EventType eventType,
+        string topicKey,
+        string payload,
+        Dictionary<int, ChannelWriter<PubSubMessage>> pipes)
     {
         var message = new PubSubMessage(eventType, topicKey, payload);
         int delivered = 0;
         foreach (var pipe in pipes.Values)
         {
-            // TryWrite returns false only if the channel is completed (client disconnected)
             if (pipe.TryWrite(message))
                 delivered++;
         }
-
         return delivered;
     }
 
-
-    // Work-queue: first idle subscriber wins (BLPOP semantics)
     private static int DeliverToOne(
         EventType eventType,
         string topicKey,
@@ -143,7 +170,6 @@ internal sealed class PubSub : IDisposable
                 return 1;
             }
         }
-
         return 0;
     }
 

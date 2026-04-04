@@ -2,12 +2,13 @@
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
 using RedisClone.CLI.Storage;
+using RedisClone.CLI.Subscriptions;
 
 namespace RedisClone.CLI.Commands.Handlers;
 
 [Argument(min: 4)]
 [ReplicationRole(role: ReplicationRole.Master)]
-internal sealed class XAdd(AppSettings settings, StreamStorage storage) : BaseCommandHandler(settings)
+internal sealed class XAdd(AppSettings settings, StreamStorage storage, PubSub pubSub) : BaseCommandHandler(settings)
 {
     public override bool SupportsReplication => true;
 
@@ -34,6 +35,11 @@ internal sealed class XAdd(AppSettings settings, StreamStorage storage) : BaseCo
         if(!storage.TryAppend(streamKey, inputId, entries, out var id, out var error))
         {
             return RedisValue.ToError(error ?? "ERR failed to append to stream");
+        }
+
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            pubSub.Publish(EventType.StreamAdded, streamKey, id);
         }
 
         return RedisValue.ToBulkString(id);

@@ -3,6 +3,7 @@ using RedisClone.CLI.Commands;
 using RedisClone.CLI.Commands.Handlers;
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Options;
+using RedisClone.CLI.Subscriptions;
 using RedisClone.CLI.Tests.Factories;
 using System.Net.Sockets;
 using System.Text;
@@ -12,6 +13,7 @@ namespace RedisClone.CLI.Tests.Handlers;
 public sealed class ValidationTests : IAsyncDisposable
 {
     private readonly ClientConnection _connection;
+    private readonly PubSub _pubSub = new();
     private readonly Socket _client;
     private readonly AppSettings _settings = AppSettings.Default;
 
@@ -37,7 +39,7 @@ public sealed class ValidationTests : IAsyncDisposable
     [Fact]
     public void Handler_WithMaxArgs_AboveMax_ReturnsError()
     {
-        var handler = new CLI.Commands.Handlers.LLen(_settings, new CLI.Storage.ListStorage());
+        var handler = new LLen(_settings, new CLI.Storage.ListStorage());
         // LLen has max 1 arg
         var cmd = CommandFactory.Create(CommandType.LLen, "key1", "key2");
 
@@ -111,7 +113,7 @@ public sealed class ValidationTests : IAsyncDisposable
             }
         };
 
-        var handler = new RPush(slaveSettings, new CLI.Storage.ListStorage());
+        var handler = new RPush(slaveSettings, new CLI.Storage.ListStorage(), _pubSub);
         var cmd = CommandFactory.Create(CommandType.RPush, "mylist", "a");
 
         var result = handler.Handle(cmd, _connection);
@@ -121,7 +123,7 @@ public sealed class ValidationTests : IAsyncDisposable
     [Fact]
     public void RPush_OnMaster_Succeeds()
     {
-        var handler = new RPush(_settings, new CLI.Storage.ListStorage());
+        var handler = new RPush(_settings, new CLI.Storage.ListStorage(), _pubSub);
         var cmd = CommandFactory.Create(CommandType.RPush, "mylist", "a");
 
         var result = handler.Handle(cmd, _connection);
