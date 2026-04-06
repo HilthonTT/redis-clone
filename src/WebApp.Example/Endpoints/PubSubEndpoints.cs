@@ -13,7 +13,8 @@ public static class PubSubEndpoints
             return Results.Ok(RedisResponse<long>.Ok(reached));
         })
         .WithName("Publish")
-        .WithSummary("PUBLISH channel message — send message to subscribers");
+        .WithSummary("PUBLISH channel message — send message to subscribers")
+        .WithTags(Tags.PubSub);
 
         // SSE endpoint: subscribe to a channel and stream messages as Server-Sent Events.
         // Test with: curl -N http://localhost:5000/redis/subscribe/news
@@ -35,7 +36,8 @@ public static class PubSubEndpoints
             }
         })
         .WithName("Subscribe")
-        .WithSummary("SUBSCRIBE channel — SSE stream of pub/sub messages (use curl -N to test)");
+        .WithSummary("SUBSCRIBE channel — SSE stream of pub/sub messages (use curl -N to test)")
+        .WithTags(Tags.PubSub);
 
         return group;
     }

@@ -13,7 +13,8 @@ public static class ListEndpoints
             return Results.Ok(RedisResponse<long>.Ok(count));
         })
         .WithName("LPush")
-        .WithSummary("LPUSH key value [value ...] — prepend to list head");
+        .WithSummary("LPUSH key value [value ...] — prepend to list head")
+        .WithTags(Tags.List);
 
         group.MapPost("/rpush", async (ListPushRequest request, RedisClient redis) =>
         {
@@ -21,7 +22,8 @@ public static class ListEndpoints
             return Results.Ok(RedisResponse<long>.Ok(count));
         })
         .WithName("RPush")
-        .WithSummary("RPUSH key value [value ...] — append to list tail");
+        .WithSummary("RPUSH key value [value ...] — append to list tail")
+        .WithTags(Tags.List);
 
         group.MapPost("/lpop", async (LPopRequest request, RedisClient redis) =>
         {
@@ -37,7 +39,8 @@ public static class ListEndpoints
                 : Results.Ok(RedisResponse<string>.Fail("List is empty or key not found (nil)"));
         })
         .WithName("LPop")
-        .WithSummary("LPOP key [count] — remove and return elements from the head");
+        .WithSummary("LPOP key [count] — remove and return elements from the head")
+        .WithTags(Tags.List);
 
         group.MapPost("/blpop", async (BLPopRequest request, RedisClient redis, CancellationToken ct) =>
         {
@@ -48,7 +51,8 @@ public static class ListEndpoints
                 : Results.Ok(RedisResponse<object>.Fail("Timeout — no data arrived"));
         })
         .WithName("BLPop")
-        .WithSummary("BLPOP key timeout — blocking left pop, waits for data");
+        .WithSummary("BLPOP key timeout — blocking left pop, waits for data")
+        .WithTags(Tags.List);
 
         group.MapGet("/llen/{key}", async (string key, RedisClient redis) =>
         {
@@ -56,7 +60,8 @@ public static class ListEndpoints
             return Results.Ok(RedisResponse<long>.Ok(len));
         })
         .WithName("LLen")
-        .WithSummary("LLEN key — return list length");
+        .WithSummary("LLEN key — return list length")
+        .WithTags(Tags.List);
 
         group.MapGet("/lrange/{key}", async (
             string key, int start, int end, RedisClient redis) =>
@@ -65,7 +70,8 @@ public static class ListEndpoints
             return Results.Ok(RedisResponse<List<string?>>.Ok(values));
         })
         .WithName("LRange")
-        .WithSummary("LRANGE key start end — return elements in range (inclusive)");
+        .WithSummary("LRANGE key start end — return elements in range (inclusive)")
+        .WithTags(Tags.List);
 
         return group;
     }

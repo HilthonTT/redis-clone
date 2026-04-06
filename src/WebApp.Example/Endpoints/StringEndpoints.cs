@@ -13,7 +13,8 @@ public static class StringEndpoints
             return Results.Ok(RedisResponse<string>.Ok(pong ? "PONG" : "NO RESPONSE"));
         })
         .WithName("Ping")
-        .WithSummary("PING — verify server is alive");
+        .WithSummary("PING — verify server is alive")
+        .WithTags(Tags.String);
 
         group.MapGet("/echo/{message}", async (string message, RedisClient redis) =>
         {
@@ -21,7 +22,8 @@ public static class StringEndpoints
             return Results.Ok(RedisResponse<string>.Ok(result!));
         })
         .WithName("Echo")
-        .WithSummary("ECHO message — returns the same message back");
+        .WithSummary("ECHO message — returns the same message back")
+        .WithTags(Tags.String);
 
         group.MapGet("/get/{key}", async (string key, RedisClient redis) =>
         {
@@ -31,7 +33,8 @@ public static class StringEndpoints
                 : Results.Ok(RedisResponse<string>.Fail("Key not found (nil)"));
         })
         .WithName("Get")
-        .WithSummary("GET key — retrieve a string value");
+        .WithSummary("GET key — retrieve a string value")
+        .WithTags(Tags.String);
 
         group.MapPost("/set", async (SetRequest request, RedisClient redis) =>
         {
@@ -48,7 +51,8 @@ public static class StringEndpoints
             return Results.Ok(RedisResponse<string>.Ok("OK"));
         })
         .WithName("Set")
-        .WithSummary("SET key value [PX ms] — store a string, optionally with expiry");
+        .WithSummary("SET key value [PX ms] — store a string, optionally with expiry")
+        .WithTags(Tags.String);
 
         return group;
     }

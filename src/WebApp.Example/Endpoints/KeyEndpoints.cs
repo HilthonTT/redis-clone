@@ -13,7 +13,8 @@ public static class KeyEndpoints
             return Results.Ok(RedisResponse<string>.Ok(type ?? "none"));
         })
         .WithName("Type")
-        .WithSummary("TYPE key — returns the data type stored at key");
+        .WithSummary("TYPE key — returns the data type stored at key")
+        .WithTags(Tags.Keys);
 
         group.MapGet("/keys", async (string pattern, RedisClient redis) =>
         {
@@ -21,7 +22,8 @@ public static class KeyEndpoints
             return Results.Ok(RedisResponse<List<string?>>.Ok(keys));
         })
         .WithName("Keys")
-        .WithSummary("KEYS pattern — return all matching keys (only * supported)");
+        .WithSummary("KEYS pattern — return all matching keys (only * supported)")
+        .WithTags(Tags.Keys);
 
         group.MapGet("/config/{parameter}", async (string parameter, RedisClient redis) =>
         {
@@ -29,7 +31,8 @@ public static class KeyEndpoints
             return Results.Ok(RedisResponse<List<string?>>.Ok(values));
         })
         .WithName("ConfigGet")
-        .WithSummary("CONFIG GET parameter — return server configuration value");
+        .WithSummary("CONFIG GET parameter — return server configuration value")
+        .WithTags(Tags.Keys);
 
         return group;
     }

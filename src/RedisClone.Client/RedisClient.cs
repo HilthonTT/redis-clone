@@ -37,37 +37,154 @@ public sealed class RedisClient : IAsyncDisposable
     /// Sends a PING to the server. Returns true if the server responds with PONG.
     /// Useful for health checks.
     /// </summary>
-    public async Task<bool> PingAsync(CancellationToken ct = default)
+    public async Task<bool> PingAsync(CancellationToken cancellationToken = default)
     {
-        var result = await ExecuteAsync(["PING"], ct);
+        var result = await ExecuteAsync(["PING"], cancellationToken);
         return result.AsString() == "PONG";
     }
 
     /// <summary>
     /// GET key — returns the value, or null if the key doesn't exist.
     /// </summary>
-    public async Task<string?> GetAsync(string key, CancellationToken ct = default)
+    public async Task<string?> GetAsync(string key, CancellationToken cancellationToken = default)
     {
-        var result = await ExecuteAsync(["GET", key], ct);
+        var result = await ExecuteAsync(["GET", key], cancellationToken);
         return result.AsString();
     }
 
     /// <summary>
     /// SET key value — stores a string value.
     /// </summary>
-    public async Task SetAsync(string key, string value, CancellationToken ct = default)
+    public async Task SetAsync(string key, string value, CancellationToken cancellationToken = default)
     {
-        var result = await ExecuteAsync(["SET", key, value], ct);
+        var result = await ExecuteAsync(["SET", key, value], cancellationToken);
         result.ThrowIfError();
+    }
+
+    /// <summary>
+    /// Asynchronously increments the numeric value stored at the specified key.
+    /// </summary>
+    /// <remarks>If the key does not exist, it is set to 0 before performing the increment. If the key
+    /// contains a value of the wrong type, an error is returned.</remarks>
+    /// <param name="key">The key identifying the value to increment. The key must refer to a numeric value.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous increment operation.</returns>
+    public async Task<long> IncrementAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["INCR", key], cancellationToken);
+        return result.ThrowIfError().AsLong();
+    }
+
+    /// <summary>
+    /// Asynchronously decrements the numeric value stored at the specified key by one.
+    /// </summary>
+    /// <remarks>If the key does not exist, it is set to 0 before performing the operation. If the key
+    /// contains a value of the wrong type or cannot be represented as an integer, an error is returned.</remarks>
+    /// <param name="key">The key identifying the value to decrement. The key must refer to a string holding an integer value.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the value of the key after the
+    /// decrement operation.</returns>
+    public async Task<long> DecrementAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["DECR", key], cancellationToken);
+        return result.ThrowIfError().AsLong();
+    }
+
+    /// <summary>
+    /// Asynchronously increments the numeric value stored at the specified key by the given delta.
+    /// </summary>
+    /// <remarks>If the key does not exist, it is set to 0 before performing the operation. If the key
+    /// contains a value of the wrong type, an error is returned.</remarks>
+    /// <param name="key">The key whose value to increment. Cannot be null or empty.</param>
+    /// <param name="delta">The amount by which to increment the value. Can be positive or negative.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the new value after the increment.</returns>
+    public async Task<long> IncrementByAsync(
+        string key, 
+        long delta, 
+        CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["INCRBY", key, delta.ToString()], cancellationToken);
+        return result.ThrowIfError().AsLong();
+    }
+
+    /// <summary>
+    /// Asynchronously decrements the numeric value stored at the specified key by the given amount.
+    /// </summary>
+    /// <remarks>If the key does not exist, it is set to 0 before performing the operation. If the key
+    /// contains a value of the wrong type, an error is returned.</remarks>
+    /// <param name="key">The key identifying the value to decrement. Cannot be null or empty.</param>
+    /// <param name="delta">The amount by which to decrement the value. Must be a non-zero integer.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the value of the key after the
+    /// decrement operation.</returns>
+    public async Task<long> DecrementByAsync(
+        string key, 
+        long delta, 
+        CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["DECRBY", key, delta.ToString()], cancellationToken);
+        return result.ThrowIfError().AsLong();
+    }
+
+    /// <summary>
+    /// Sends a MULTI command to the server to start a Redis transaction asynchronously.
+    /// </summary>
+    /// <remarks>This method initiates a transaction block in Redis. Subsequent commands will be queued for
+    /// atomic execution until EXEC or DISCARD is called. The method does not return the transaction result; it only
+    /// starts the transaction context.</remarks>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task MultiAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["MULTI"], cancellationToken);
+        result.ThrowIfError();
+    }
+
+    /// <summary>
+    /// Executes the transaction asynchronously.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task ExecAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["EXEC"], cancellationToken);
+        result.ThrowIfError();
+    }
+
+    /// <summary>
+    /// Discards all commands issued after the last transaction started on the current connection asynchronously.
+    /// </summary>
+    /// <remarks>This method is typically used to abort a transaction and clear any queued commands without
+    /// executing them. If the operation is canceled via the provided cancellation token, the transaction state may
+    /// remain unchanged.</remarks>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the discard operation.</param>
+    /// <returns>A task that represents the asynchronous discard operation.</returns>
+    public async Task DiscardAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["DISCARD"], cancellationToken);
+        result.ThrowIfError();
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<long> TTLAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["TTL", key], cancellationToken);
+        return result.ThrowIfError().AsLong();
     }
 
     /// <summary>
     /// SET key value PX milliseconds — stores a string value with an expiry.
     /// </summary>
-    public async Task SetAsync(string key, string value, TimeSpan expiry, CancellationToken ct = default)
+    public async Task SetAsync(string key, string value, TimeSpan expiry, CancellationToken cancellationToken = default)
     {
         long ms = (long)expiry.TotalMilliseconds;
-        var result = await ExecuteAsync(["SET", key, value, "PX", ms.ToString()], ct);
+        var result = await ExecuteAsync(["SET", key, value, "PX", ms.ToString()], cancellationToken);
         result.ThrowIfError();
     }
 
@@ -163,7 +280,7 @@ public sealed class RedisClient : IAsyncDisposable
     /// Returns the assigned entry ID.
     /// </summary>
     public async Task<string?> XAddAsync(
-        string streamKey, string id, Dictionary<string, string> fields, CancellationToken ct = default)
+        string streamKey, string id, Dictionary<string, string> fields, CancellationToken cancellationToken = default)
     {
         var cmd = new List<string>(4 + fields.Count * 2) { "XADD", streamKey, id };
         foreach (var (field, value) in fields)
@@ -172,7 +289,7 @@ public sealed class RedisClient : IAsyncDisposable
             cmd.Add(value);
         }
 
-        var result = await ExecuteAsync(cmd.ToArray(), ct);
+        var result = await ExecuteAsync(cmd.ToArray(), cancellationToken);
         return result.ThrowIfError().AsString();
     }
 

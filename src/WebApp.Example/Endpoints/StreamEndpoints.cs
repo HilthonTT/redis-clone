@@ -18,7 +18,8 @@ public static class StreamEndpoints
             return Results.Ok(RedisResponse<string>.Ok(entryId!));
         })
         .WithName("XAdd")
-        .WithSummary("XADD stream id field value [...] — append entry to stream");
+        .WithSummary("XADD stream id field value [...] — append entry to stream")
+        .WithTags(Tags.Stream);
 
         return group;
     }

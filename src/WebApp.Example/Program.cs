@@ -32,30 +32,26 @@ builder.Services.AddRedisClient(options =>
 
 WebApplication app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.RoutePrefix = string.Empty; // Swagger UI at /
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "RedisClone Test API v1");
-        options.DocumentTitle = "RedisClone Test API";
-    });
-}
-
-app.UseMiddleware<RedisExceptionHandler>();
-
 var redis = app.MapGroup("/redis")
     .WithTags("Redis Commands");
-
-app.UseHttpsRedirection();
 
 redis.MapStringEndpoints();
 redis.MapListEndpoints();
 redis.MapPubSubEndpoints();
 redis.MapStreamEndpoints();
 redis.MapKeyEndpoints();
+redis.MapIncrDecrEndpoints();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseMiddleware<RedisExceptionHandler>();
+
+app.UseHttpsRedirection();
 
 await app.RunAsync();

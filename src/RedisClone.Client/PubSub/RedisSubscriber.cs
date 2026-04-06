@@ -127,6 +127,8 @@ public sealed class RedisSubscriber : IAsyncDisposable
         }
         catch (OperationCanceledException) { }
 
+        await UnsubscribeAsync();
+
         await _connection.DisposeAsync();
         _cts.Dispose();
     }

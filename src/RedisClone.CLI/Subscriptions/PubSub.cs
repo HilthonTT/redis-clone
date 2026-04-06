@@ -151,7 +151,9 @@ internal sealed class PubSub : IDisposable
         foreach (var pipe in pipes.Values)
         {
             if (pipe.TryWrite(message))
+            {
                 delivered++;
+            }
         }
         return delivered;
     }
