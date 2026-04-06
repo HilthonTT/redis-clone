@@ -8,7 +8,8 @@ using System.Net.Sockets;
 namespace RedisClone.CLI.Server;
 
 internal sealed class Server(
-    AppSettings appSettings, 
+    AppSettings appSettings,
+    AppMetrics.AppMetrics appMetrics,
     IServiceProvider serviceProvider) : IServer
 {
     private readonly ConcurrentDictionary<int, ClientConnection> _clients = new();
@@ -41,6 +42,9 @@ internal sealed class Server(
 
     private async Task HandleConnectionAsync(Socket socket, int connectionId, CancellationToken cancellationToken)
     {
+        appMetrics.ConnectionsTotal.Inc();
+        appMetrics.ActiveConnections.Inc();
+
         using (socket)
         {
             var connection = new ClientConnection(connectionId, socket);

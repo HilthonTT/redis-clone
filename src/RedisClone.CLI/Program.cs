@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Prometheus;
+using RedisClone.CLI.AppMetrics;
 using RedisClone.CLI.Commands;
 using RedisClone.CLI.Commands.Handlers;
 using RedisClone.CLI.Options;
@@ -24,7 +26,8 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<ReplicaManager>()
     .AddSingleton<MasterManager>()
     .AddTransient<IWorker, TcpConnectionWorker>()
-    .AddSingleton<IServer, Server>();
+    .AddSingleton<IServer, Server>()
+    .AddSingleton<AppMetrics>();
 
 serviceBuilder
     .AddSingleton<KvpStorage>()
@@ -92,6 +95,12 @@ masterManager.StartReplication();
 
 var replicationManager = serviceProvider.GetRequiredService<ReplicaManager>();
 await replicationManager.ConnectToMasterAsync();
+
+var metricServer = new MetricServer(port: 9090);
+metricServer.Start();
+
+Console.WriteLine($"Prometheus metrics exposed at: http://localhost:9090/metrics");
+Console.WriteLine($"   (Add this to your prometheus.yml scrape config)");
 
 var server = serviceProvider.GetRequiredService<IServer>();
 await server.StartAndListenAsync();

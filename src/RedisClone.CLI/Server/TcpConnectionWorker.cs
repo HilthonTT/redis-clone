@@ -3,12 +3,15 @@ using RedisClone.CLI.Logging;
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Protocol;
 using RedisClone.CLI.Server.Interfaces;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 
 namespace RedisClone.CLI.Server;
 
-internal sealed class TcpConnectionWorker(CommandProcessor commandProcessor) : IWorker
+internal sealed class TcpConnectionWorker(
+    CommandProcessor commandProcessor, 
+    AppMetrics.AppMetrics metrics) : IWorker
 {
     public async Task HandleConnectionAsync(
         ClientConnection connection, 
@@ -31,12 +34,46 @@ internal sealed class TcpConnectionWorker(CommandProcessor commandProcessor) : I
                 }
 
                 var command = Command.FromResp(parsed);
-                RespLogger.Received(connection.Id, $"{command.Type} {string.Join(' ', command.Arguments)}");
+                var commandName = command.Type.ToString().ToLowerInvariant();
 
-                RedisValue response = await commandProcessor.ProcessCommand(command, connection);
-                RespLogger.Sending(connection.Id, response.Value);
+                var stopwatch = Stopwatch.StartNew();
 
-                await connection.Socket.SendAsync(response.Value, SocketFlags.None, cancellationToken);
+                try
+                {
+                    RespLogger.Received(connection.Id, $"{command.Type} {string.Join(' ', command.Arguments)}");
+
+                    RedisValue response = await commandProcessor.ProcessCommand(command, connection);
+
+                    stopwatch.Stop();
+                    RespLogger.Sending(connection.Id, response.Value);
+
+                    metrics.CommandDurationSeconds
+                    .WithLabels(commandName)
+                    .Observe(stopwatch.Elapsed.TotalSeconds);
+
+                    metrics.CommandsTotal
+                        .WithLabels(commandName, "success")
+                        .Inc();
+
+                    await connection.Socket.SendAsync(response.Value, SocketFlags.None, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    stopwatch.Stop();
+                    metrics.CommandDurationSeconds
+                        .WithLabels(commandName)
+                        .Observe(stopwatch.Elapsed.TotalSeconds);
+
+                    metrics.CommandsTotal
+                        .WithLabels(commandName, "error")
+                        .Inc();
+
+                    metrics.CommandErrorsTotal
+                        .WithLabels(commandName, ex.GetType().Name)
+                        .Inc();
+
+                    throw;
+                }
             }
         }
         catch (OperationCanceledException)
