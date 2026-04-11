@@ -7,22 +7,23 @@ namespace RedisClone.CLI.Persistence;
 
 internal sealed class RdbParser
 {
-    private static readonly DateTime Epoch =
-        new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     // One-byte lookahead — avoids seeking backwards on non-seekable streams.
     private byte? _peeked;
 
     public async Task<DataModel> ParseAsync(string backupFile)
     {
-        await using var fileStream = new FileStream(
-            backupFile, FileMode.Open, FileAccess.Read,
-            FileShare.Read, bufferSize: 4096, useAsync: true);
+        byte[] fileBytes = await File.ReadAllBytesAsync(backupFile);
+
+        VerifyChecksum(fileBytes, backupFile);
+
+        using var stream = new MemoryStream(fileBytes, writable: false);
 
         var dataModel = new DataModel();
-        await ParseHeaderAsync(fileStream, dataModel);
-        await ParseMetadataAsync(fileStream, dataModel);
-        await ParseDatabasesAsync(fileStream, dataModel);
+        await ParseHeaderAsync(stream, dataModel);
+        await ParseMetadataAsync(stream, dataModel);
+        await ParseDatabasesAsync(stream, dataModel);
         return dataModel;
     }
 
@@ -242,5 +243,37 @@ internal sealed class RdbParser
     {
         _peeked = null;
         return Task.CompletedTask;
+    }
+
+    private static void VerifyChecksum(ReadOnlySpan<byte> fileBytes, string backupFile)
+    {
+        // Redis writes 0x00 for the checksum when it's disabled.
+        // A file shorter than 9 (header) + 8 (checksum) bytes is malformed regardless.
+        if (fileBytes.Length < 17)
+        {
+            throw new InvalidDataException(
+                $"RDB file '{backupFile}' is too short to contain a valid checksum.");
+        }
+
+        var payload = fileBytes[..^8];
+        var stored = fileBytes[^8..];
+
+        ulong storedCrc = BinaryPrimitives.ReadUInt64LittleEndian(stored);
+        ulong computedCrc = Crc64.Compute(payload);
+
+        // Redis writes all-zeros when checksum verification is disabled (rdbchecksum no).
+        // Treat that as a valid "skip" rather than a failure.
+        if (storedCrc == 0)
+        {
+            return;
+        }
+
+        if (storedCrc != computedCrc)
+        {
+            throw new InvalidDataException(
+                $"RDB file '{backupFile}' failed CRC-64 integrity check. " +
+                $"Expected 0x{computedCrc:X16}, got 0x{storedCrc:X16}. " +
+                "The file may be corrupted or truncated.");
+        }
     }
 }

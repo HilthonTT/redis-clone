@@ -28,7 +28,15 @@ public sealed class ServerInitializerTests : IDisposable
             Replication = new ReplicationSettings
             {
                 Role = ReplicationRole.Master
-            }
+            },
+            Security = new SecuritySettings
+            {
+                RequireUser = "default",
+                MaxConnectionsPerIp = 50,
+                MaxTotalConnections = 10_000,
+                RateLimitPerSecond = 1000,
+                RateLimitBurst = 200,
+            },
         };
 
         _settingsProviderMock = new Mock<ISettingsProvider>();

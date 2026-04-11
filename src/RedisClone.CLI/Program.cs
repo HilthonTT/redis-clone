@@ -7,6 +7,7 @@ using RedisClone.CLI.Options;
 using RedisClone.CLI.Options.Interfaces;
 using RedisClone.CLI.Persistence;
 using RedisClone.CLI.Replication;
+using RedisClone.CLI.Security;
 using RedisClone.CLI.Server;
 using RedisClone.CLI.Server.Interfaces;
 using RedisClone.CLI.Storage;
@@ -27,7 +28,8 @@ var serviceBuilder = new ServiceCollection()
     .AddSingleton<MasterManager>()
     .AddTransient<IWorker, TcpConnectionWorker>()
     .AddSingleton<IServer, Server>()
-    .AddSingleton<AppMetrics>();
+    .AddSingleton<AppMetrics>()
+    .AddSingleton<IpGuard>();
 
 serviceBuilder
     .AddSingleton<KvpStorage>()
@@ -83,7 +85,10 @@ serviceBuilder
     // Transactions
     .AddTransient<ICommandHandler, Multi>()
     .AddTransient<ICommandHandler, Exec>()
-    .AddTransient<ICommandHandler, Discard>();
+    .AddTransient<ICommandHandler, Discard>()
+
+    // Authentication
+    .AddTransient<ICommandHandler, Auth>();
 
 using var serviceProvider = serviceBuilder.BuildServiceProvider();
 

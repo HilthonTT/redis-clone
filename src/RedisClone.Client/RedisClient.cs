@@ -341,6 +341,14 @@ public sealed class RedisClient : IAsyncDisposable
             _options.Port, 
             _options.ConnectTimeout);
 
+        if (!string.IsNullOrEmpty(_options.Password))
+        {
+            var authResult = await conn.ExecuteAsync(
+                ["AUTH", _options.Username, _options.Password]);
+            authResult.ThrowIfError();
+        }
+
+
         return new RedisSubscriber(conn, channels);
     }
 
@@ -360,6 +368,19 @@ public sealed class RedisClient : IAsyncDisposable
     {
         var result = await ExecuteAsync(["CONFIG", "GET", parameter], cancellationToken);
         return result.ThrowIfError().AsStringList();
+    }
+
+    /// <summary>
+    /// AUTH username password — authenticates the current connection.
+    /// Called automatically on every pooled connection when Password is configured.
+    /// </summary>
+    public async Task AuthAsync(
+        string username,
+        string password,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteAsync(["AUTH", username, password], cancellationToken);
+        result.ThrowIfError();
     }
 
     public async Task<RespValue> ExecuteAsync(string[] command, CancellationToken cancellationToken = default)

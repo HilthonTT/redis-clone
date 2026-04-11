@@ -58,6 +58,14 @@ public sealed class ConnectionPool : IAsyncDisposable
                 _options.ConnectTimeout, 
                 cancellationToken);
 
+            if (!string.IsNullOrEmpty(_options.Password))
+            {
+                var authResult = await conn.ExecuteAsync(
+                    ["AUTH", _options.Username, _options.Password],
+                    cancellationToken);
+                authResult.ThrowIfError();
+            }
+
             Interlocked.Increment(ref _totalCreated);
             return conn;
         }

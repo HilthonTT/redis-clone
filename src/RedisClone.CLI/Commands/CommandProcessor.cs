@@ -5,6 +5,8 @@ namespace RedisClone.CLI.Commands;
 
 internal sealed class CommandProcessor(IEnumerable<ICommandHandler> handlers)
 {
+    private static readonly HashSet<CommandType> _alwaysAllowed = [CommandType.Auth];
+
     private readonly FrozenDictionary<CommandType, ICommandHandler> _handlers =
         handlers.ToFrozenDictionary(h => h.CommandType);
 
@@ -16,6 +18,11 @@ internal sealed class CommandProcessor(IEnumerable<ICommandHandler> handlers)
     /// </summary>
     public async Task<RedisValue> ProcessCommand(Command command, ClientConnection connection)
     {
+        if (!connection.IsAuthenticated && !_alwaysAllowed.Contains(command.Type))
+        {
+            return RedisValue.ToError("NOAUTH Authentication required");
+        }
+
         // When in a transaction, queue commands instead of executing —
         // except for EXEC, DISCARD, and nested MULTI.
         if (connection.InTransactionMode && !TransactionControlCommands.Contains(command.Type))

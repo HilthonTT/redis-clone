@@ -2,16 +2,19 @@
 using RedisClone.CLI.Logging;
 using RedisClone.CLI.Models;
 using RedisClone.CLI.Protocol;
+using RedisClone.CLI.Security;
 using RedisClone.CLI.Server.Interfaces;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Net;
 using System.Net.Sockets;
 
 namespace RedisClone.CLI.Server;
 
 internal sealed class TcpConnectionWorker(
     CommandProcessor commandProcessor, 
-    AppMetrics.AppMetrics metrics) : IWorker
+    AppMetrics.AppMetrics metrics,
+    IpGuard ipGuard) : IWorker
 {
     public async Task HandleConnectionAsync(
         ClientConnection connection, 
@@ -36,6 +39,14 @@ internal sealed class TcpConnectionWorker(
                 var command = Command.FromResp(parsed);
                 var commandName = command.Type.ToString().ToLowerInvariant();
 
+                string ip = (connection.Socket.RemoteEndPoint as IPEndPoint)?.Address.ToString() ?? "";
+                if (!ipGuard.TryConsumeCommand(ip))
+                {
+                    var throttle = RedisValue.ToError("ERR too many requests");
+                    await connection.Socket.SendAsync(throttle.Value, SocketFlags.None, cancellationToken);
+                    continue;   // don't disconnect, just drop this command
+                }
+
                 var stopwatch = Stopwatch.StartNew();
 
                 try
@@ -48,8 +59,8 @@ internal sealed class TcpConnectionWorker(
                     RespLogger.Sending(connection.Id, response.Value);
 
                     metrics.CommandDurationSeconds
-                    .WithLabels(commandName)
-                    .Observe(stopwatch.Elapsed.TotalSeconds);
+                        .WithLabels(commandName)
+                        .Observe(stopwatch.Elapsed.TotalSeconds);
 
                     metrics.CommandsTotal
                         .WithLabels(commandName, "success")

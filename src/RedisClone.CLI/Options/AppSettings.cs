@@ -19,6 +19,14 @@ public sealed class AppSettings
         {
             Role = ReplicationRole.Master,
         },
+        Security = new SecuritySettings
+        {
+            RequireUser = "default",
+            MaxConnectionsPerIp = 50,
+            MaxTotalConnections = 10_000,
+            RateLimitPerSecond = 1000,
+            RateLimitBurst = 200,
+        },
     };
 
     public required RuntimeSettings Runtime { get; init; }
@@ -26,6 +34,8 @@ public sealed class AppSettings
     public required PersistenceSettings Persistence { get; init; }
 
     public required ReplicationSettings Replication { get; init; }
+
+    public required SecuritySettings Security { get; init; }
 
     public static string GetAppDataDirectory() =>
         Path.Combine(

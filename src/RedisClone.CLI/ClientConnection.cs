@@ -31,6 +31,8 @@ internal sealed class ClientConnection(int id, Socket socket) : IAsyncDisposable
 
     public long LastCommandOffset { get; set; }
 
+    public bool IsAuthenticated { get; private set; }
+
     public bool IsReplicaConnection => Id == -1;
 
     // The writer is exposed so PubSub can enqueue without touching internals.
@@ -79,6 +81,15 @@ internal sealed class ClientConnection(int id, Socket socket) : IAsyncDisposable
         {
             _modeLock.Release();
         }
+    }
+
+    public void Authenticate() => IsAuthenticated = true;
+
+    // Call this once after construction so open-mode servers
+    // don't require AUTH at all.
+    public void SetInitialAuthState(bool requiresAuth)
+    {
+        IsAuthenticated = !requiresAuth;
     }
 
     private async Task PubSubBroadcastAsync(CancellationToken ct)

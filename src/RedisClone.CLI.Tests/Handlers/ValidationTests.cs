@@ -110,7 +110,15 @@ public sealed class ValidationTests : IAsyncDisposable
                     MasterHost = "localhost",
                     MasterPort = 6380
                 }
-            }
+            },
+            Security = new SecuritySettings
+            {
+                RequireUser = "default",
+                MaxConnectionsPerIp = 50,
+                MaxTotalConnections = 10_000,
+                RateLimitPerSecond = 1000,
+                RateLimitBurst = 200,
+            },
         };
 
         var handler = new RPush(slaveSettings, new CLI.Storage.ListStorage(), _pubSub);

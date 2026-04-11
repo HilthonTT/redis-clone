@@ -55,4 +55,6 @@ public enum CommandType
     Multi,
     Exec,
     Discard,
+
+    Auth,
 }
